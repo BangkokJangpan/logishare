@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { fetchUsers, fetchPosts, createUser, createPost, deleteUser, deletePost, updateUser, updatePost } from '@/lib/api';
 
 const DriverDashboard = () => {
   const { t } = useLanguage();
@@ -74,6 +75,120 @@ const DriverDashboard = () => {
     { label: t('driver.stats.efficiency'), value: "94%", icon: TrendingUp, color: "text-purple-600" }
   ];
 
+  const [users, setUsers] = useState([]);
+  const [posts, setPosts] = useState([]);
+  const [newUser, setNewUser] = useState({ name: '', email: '' });
+  const [newPost, setNewPost] = useState({ title: '', content: '', userId: '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [editUserId, setEditUserId] = useState<number|null>(null);
+  const [editUser, setEditUser] = useState({ name: '', email: '' });
+  const [editPostId, setEditPostId] = useState<number|null>(null);
+  const [editPost, setEditPost] = useState({ title: '', content: '', userId: '' });
+  const [editUserModalOpen, setEditUserModalOpen] = useState(false);
+  const [editPostModalOpen, setEditPostModalOpen] = useState(false);
+
+  useEffect(() => {
+    fetchUsers().then(res => {
+      if (res.success) setUsers(res.data);
+    });
+    fetchPosts().then(res => {
+      if (res.success) setPosts(res.data);
+    });
+  }, []);
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    const res = await createUser(newUser);
+    if (res.success) {
+      setNewUser({ name: '', email: '' });
+      fetchUsers().then(res => { if (res.success) setUsers(res.data); });
+    } else {
+      setError(res.message || '사용자 추가 실패');
+    }
+    setLoading(false);
+  };
+
+  const handleAddPost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    const res = await createPost({ ...newPost, userId: Number(newPost.userId) });
+    if (res.success) {
+      setNewPost({ title: '', content: '', userId: '' });
+      fetchPosts().then(res => { if (res.success) setPosts(res.data); });
+    } else {
+      setError(res.message || '게시글 추가 실패');
+    }
+    setLoading(false);
+  };
+
+  const handleDeleteUser = async (id: number) => {
+    setLoading(true);
+    setError('');
+    const res = await deleteUser(id);
+    if (res.success) {
+      fetchUsers().then(res => { if (res.success) setUsers(res.data); });
+    } else {
+      setError(res.message || '사용자 삭제 실패');
+    }
+    setLoading(false);
+  };
+
+  const handleDeletePost = async (id: number) => {
+    setLoading(true);
+    setError('');
+    const res = await deletePost(id);
+    if (res.success) {
+      fetchPosts().then(res => { if (res.success) setPosts(res.data); });
+    } else {
+      setError(res.message || '게시글 삭제 실패');
+    }
+    setLoading(false);
+  };
+
+  const handleEditUser = (user: any) => {
+    setEditUserId(user.id);
+    setEditUser({ name: user.name, email: user.email });
+    setEditUserModalOpen(true);
+  };
+
+  const handleSaveUser = async (id: number) => {
+    setLoading(true);
+    setError('');
+    const res = await updateUser(id, editUser);
+    if (res.success) {
+      setEditUserId(null);
+      setEditUserModalOpen(false);
+      fetchUsers().then(res => { if (res.success) setUsers(res.data); });
+    } else {
+      setError(res.message || '사용자 수정 실패');
+    }
+    setLoading(false);
+  };
+
+  const handleEditPost = (post: any) => {
+    setEditPostId(post.id);
+    setEditPost({ title: post.title, content: post.content, userId: String(post.userId) });
+    setEditPostModalOpen(true);
+  };
+
+  const handleSavePost = async (id: number) => {
+    setLoading(true);
+    setError('');
+    const res = await updatePost(id, { ...editPost, userId: Number(editPost.userId) });
+    if (res.success) {
+      setEditPostId(null);
+      setEditPostModalOpen(false);
+      fetchPosts().then(res => { if (res.success) setPosts(res.data); });
+    } else {
+      setError(res.message || '게시글 수정 실패');
+    }
+    setLoading(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 p-6 text-foreground">
       <div className="max-w-7xl mx-auto">
@@ -96,6 +211,126 @@ const DriverDashboard = () => {
             </div>
           </div>
         </div>
+
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-white">운전자 등록</h2>
+          <form onSubmit={handleAddUser} className="flex gap-2 mb-2">
+            <input
+              className="px-2 py-1 rounded text-black"
+              placeholder="이름"
+              value={newUser.name}
+              onChange={e => setNewUser({ ...newUser, name: e.target.value })}
+              required
+            />
+            <input
+              className="px-2 py-1 rounded text-black"
+              placeholder="이메일"
+              value={newUser.email}
+              onChange={e => setNewUser({ ...newUser, email: e.target.value })}
+              required
+            />
+            <button type="submit" className="bg-blue-600 text-white px-3 py-1 rounded" disabled={loading}>추가</button>
+          </form>
+        </div>
+
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-white">게시글 등록</h2>
+          <form onSubmit={handleAddPost} className="flex flex-col gap-2 mb-2">
+            <input
+              className="px-2 py-1 rounded text-black"
+              placeholder="제목"
+              value={newPost.title}
+              onChange={e => setNewPost({ ...newPost, title: e.target.value })}
+              required
+            />
+            <textarea
+              className="px-2 py-1 rounded text-black"
+              placeholder="내용"
+              value={newPost.content}
+              onChange={e => setNewPost({ ...newPost, content: e.target.value })}
+              required
+            />
+            <select
+              className="px-2 py-1 rounded text-black"
+              value={newPost.userId}
+              onChange={e => setNewPost({ ...newPost, userId: e.target.value })}
+              required
+            >
+              <option value="">작성자 선택</option>
+              {users.map((user: any) => (
+                <option key={user.id} value={user.id}>{user.name}</option>
+              ))}
+            </select>
+            <button type="submit" className="bg-green-600 text-white px-3 py-1 rounded" disabled={loading}>등록</button>
+          </form>
+          {error && <div className="text-red-400">{error}</div>}
+        </div>
+
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-white">운전자 목록 (API 연동)</h2>
+          <ul className="text-white">
+            {users.map((user: any) => (
+              <li key={user.id} className="flex items-center gap-2">
+                {user.name} ({user.email})
+                <button onClick={() => handleEditUser(user)} className="ml-2 px-2 py-0.5 bg-yellow-600 text-white rounded text-xs">수정</button>
+                <button onClick={() => handleDeleteUser(user.id)} className="px-2 py-0.5 bg-red-600 text-white rounded text-xs" disabled={loading}>삭제</button>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {editUserModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+              <h3 className="text-lg font-bold mb-2 text-gray-900">사용자 수정</h3>
+              <label className="block text-gray-700 mb-1">이름</label>
+              <input className="w-full mb-2 px-2 py-1 rounded border text-black placeholder-gray-400" value={editUser.name} onChange={e => setEditUser({ ...editUser, name: e.target.value })} placeholder="이름" />
+              <label className="block text-gray-700 mb-1">이메일</label>
+              <input className="w-full mb-2 px-2 py-1 rounded border text-black placeholder-gray-400" value={editUser.email} onChange={e => setEditUser({ ...editUser, email: e.target.value })} placeholder="이메일" />
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setEditUserModalOpen(false)} className="px-3 py-1 bg-gray-400 text-white rounded">취소</button>
+                <button onClick={() => handleSaveUser(editUserId!)} className="px-3 py-1 bg-green-600 text-white rounded" disabled={loading}>저장</button>
+              </div>
+              {error && <div className="text-red-500 mt-2">{error}</div>}
+            </div>
+          </div>
+        )}
+
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-white">게시글 목록 (API 연동)</h2>
+          <ul className="text-white">
+            {posts.map((post: any) => (
+              <li key={post.id} className="flex items-center gap-2">
+                {post.title} - {post.content} (작성자: {post.author?.name || post.userId})
+                <button onClick={() => handleEditPost(post)} className="ml-2 px-2 py-0.5 bg-yellow-600 text-white rounded text-xs">수정</button>
+                <button onClick={() => handleDeletePost(post.id)} className="px-2 py-0.5 bg-red-600 text-white rounded text-xs" disabled={loading}>삭제</button>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {editPostModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-bold mb-2 text-gray-900">게시글 수정</h3>
+              <label className="block text-gray-700 mb-1">제목</label>
+              <input className="w-full mb-2 px-2 py-1 rounded border text-black placeholder-gray-400" value={editPost.title} onChange={e => setEditPost({ ...editPost, title: e.target.value })} placeholder="제목" />
+              <label className="block text-gray-700 mb-1">내용</label>
+              <input className="w-full mb-2 px-2 py-1 rounded border text-black placeholder-gray-400" value={editPost.content} onChange={e => setEditPost({ ...editPost, content: e.target.value })} placeholder="내용" />
+              <label className="block text-gray-700 mb-1">작성자</label>
+              <select className="w-full mb-2 px-2 py-1 rounded border text-black" value={editPost.userId} onChange={e => setEditPost({ ...editPost, userId: e.target.value })}>
+                {users.map((user: any) => (
+                  <option key={user.id} value={user.id}>{user.name}</option>
+                ))}
+              </select>
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setEditPostModalOpen(false)} className="px-3 py-1 bg-gray-400 text-white rounded">취소</button>
+                <button onClick={() => handleSavePost(editPostId!)} className="px-3 py-1 bg-green-600 text-white rounded" disabled={loading}>저장</button>
+              </div>
+              {error && <div className="text-red-500 mt-2">{error}</div>}
+            </div>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
