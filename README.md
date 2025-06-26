@@ -1,73 +1,88 @@
-# Welcome to your Lovable project
+# LogiShare - 공유물류 플랫폼
 
-## Project info
+## 프로젝트 소개
 
-**URL**: https://lovable.dev/projects/234991cf-0bda-41a7-81cb-0d75690e2dd7
+LogiShare는 AI 기반 스마트 매칭을 통해 빈 차량과 화물을 효율적으로 연결하는 공유물류 플랫폼입니다.
 
-## How can I edit this code?
+## 주요 기능
 
-There are several ways of editing your application.
+- 🌍 **다국어 지원**: 한국어, 영어, 태국어
+- 🚛 **운전자 대시보드**: 실시간 운행 관리, 화물 매칭
+- 📦 **화주 대시보드**: 화물 등록, 기사 매칭, 배송 추적
+- 👨‍💼 **관리자 대시보드**: 플랫폼 통계, 시스템 관리
+- 🎨 **다크모드 UI**: 현대적이고 직관적인 사용자 인터페이스
+- 📱 **반응형 디자인**: 모든 디바이스에서 최적화된 경험
 
-**Use Lovable**
+## 기술 스택
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/234991cf-0bda-41a7-81cb-0d75690e2dd7) and start prompting.
+- **Frontend**: React, TypeScript, Vite
+- **UI Framework**: shadcn/ui, Tailwind CSS
+- **State Management**: React Context API
+- **Internationalization**: 커스텀 다국어 시스템
 
-Changes made via Lovable will be committed automatically to this repo.
+## 설치 및 실행
 
-**Use your preferred IDE**
+```bash
+# 1. 저장소 클론
+git clone https://github.com/BangkokJangpan/logishare.git
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+# 2. 프로젝트 디렉토리 이동
+cd logishare
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+# 3. 의존성 설치
+npm install
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# 4. 개발 서버 실행
 npm run dev
+
+# 5. 빌드
+npm run build
 ```
 
-**Edit a file directly in GitHub**
+## 프로젝트 구조
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```
+src/
+├── components/          # UI 컴포넌트
+│   ├── ui/             # shadcn/ui 컴포넌트
+│   ├── DriverDashboard.tsx
+│   ├── ShipperDashboard.tsx
+│   └── LanguageSelector.tsx
+├── contexts/           # React Context
+│   └── LanguageContext.tsx
+├── pages/              # 페이지 컴포넌트
+│   ├── Index.tsx
+│   ├── DriverPage.tsx
+│   ├── ShipperPage.tsx
+│   └── AdminPage.tsx
+└── lib/                # 유틸리티
+    └── utils.ts
+```
 
-**Use GitHub Codespaces**
+## 배포
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Vercel (추천)
+```bash
+npm install -g vercel
+npm run build
+vercel
+```
 
-## What technologies are used for this project?
+### Netlify
+```bash
+npm install -g netlify-cli
+npm run build
+netlify deploy --prod --dir=dist
+```
 
-This project is built with:
+## 라이선스
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+MIT License
 
-## How can I deploy this project?
+## 기여하기
 
-Simply open [Lovable](https://lovable.dev/projects/234991cf-0bda-41a7-81cb-0d75690e2dd7) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
