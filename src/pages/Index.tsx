@@ -153,7 +153,7 @@ const Index = () => {
               <Card key={index} className="bg-gray-700 border-gray-600 shadow-lg hover:shadow-xl transition-shadow duration-200">
                 <CardHeader>
                   <div className="w-12 h-12 bg-logistics-primary/20 rounded-lg flex items-center justify-center mb-4">
-                    <feature.icon className="w-6 h-6 text-logistics-primary" />
+                    <feature.icon className="w-6 h-6 text-white" />
                   </div>
                   <CardTitle className="text-xl text-white">{feature.title}</CardTitle>
                 </CardHeader>

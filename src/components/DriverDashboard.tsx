@@ -17,6 +17,17 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { fetchUsers, fetchPosts, createUser, createPost, deleteUser, deletePost, updateUser, updatePost } from '@/lib/api';
+import Logo from '@/components/ui/Logo';
+
+// 현재 날짜/시각 구하기
+const getToday = () => {
+  const d = new Date();
+  return d.toISOString().slice(0, 10);
+};
+const getNowTime = () => {
+  const d = new Date();
+  return d.toTimeString().slice(0, 5);
+};
 
 const DriverDashboard = () => {
   const { t } = useLanguage();
@@ -75,131 +86,48 @@ const DriverDashboard = () => {
     { label: t('driver.stats.efficiency'), value: "94%", icon: TrendingUp, color: "text-purple-600" }
   ];
 
-  const [users, setUsers] = useState([]);
-  const [posts, setPosts] = useState([]);
-  const [newUser, setNewUser] = useState({ name: '', email: '' });
-  const [newPost, setNewPost] = useState({ title: '', content: '', userId: '' });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [editUserId, setEditUserId] = useState<number|null>(null);
-  const [editUser, setEditUser] = useState({ name: '', email: '' });
-  const [editPostId, setEditPostId] = useState<number|null>(null);
-  const [editPost, setEditPost] = useState({ title: '', content: '', userId: '' });
-  const [editUserModalOpen, setEditUserModalOpen] = useState(false);
-  const [editPostModalOpen, setEditPostModalOpen] = useState(false);
+  const [users, setUsers] = useState([
+    { id: 1, name: '김철수' },
+    { id: 2, name: '이영희' },
+    { id: 3, name: '박기사' },
+  ]);
+
+  const [vehicles, setVehicles] = useState([]);
 
   useEffect(() => {
-    fetchUsers().then(res => {
-      if (res.success) setUsers(res.data);
-    });
-    fetchPosts().then(res => {
-      if (res.success) setPosts(res.data);
-    });
+    // fetchUsers().then(res => {
+    //   if (res.success) setUsers(res.data);
+    // });
+    // fetchPosts().then(res => {
+    //   if (res.success) setPosts(res.data);
+    // });
+    // 샘플 차량 데이터 추가
+    setVehicles([
+      { id: 2001, number: '12가3456' },
+      { id: 2002, number: '34나5678' },
+      { id: 2003, number: '56다7890' },
+      { id: 2004, number: '78라1234' },
+      { id: 2005, number: '90마5678' },
+    ]);
   }, []);
-
-  const handleAddUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    const res = await createUser(newUser);
-    if (res.success) {
-      setNewUser({ name: '', email: '' });
-      fetchUsers().then(res => { if (res.success) setUsers(res.data); });
-    } else {
-      setError(res.message || '사용자 추가 실패');
-    }
-    setLoading(false);
-  };
-
-  const handleAddPost = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    const res = await createPost({ ...newPost, userId: Number(newPost.userId) });
-    if (res.success) {
-      setNewPost({ title: '', content: '', userId: '' });
-      fetchPosts().then(res => { if (res.success) setPosts(res.data); });
-    } else {
-      setError(res.message || '게시글 추가 실패');
-    }
-    setLoading(false);
-  };
-
-  const handleDeleteUser = async (id: number) => {
-    setLoading(true);
-    setError('');
-    const res = await deleteUser(id);
-    if (res.success) {
-      fetchUsers().then(res => { if (res.success) setUsers(res.data); });
-    } else {
-      setError(res.message || '사용자 삭제 실패');
-    }
-    setLoading(false);
-  };
-
-  const handleDeletePost = async (id: number) => {
-    setLoading(true);
-    setError('');
-    const res = await deletePost(id);
-    if (res.success) {
-      fetchPosts().then(res => { if (res.success) setPosts(res.data); });
-    } else {
-      setError(res.message || '게시글 삭제 실패');
-    }
-    setLoading(false);
-  };
-
-  const handleEditUser = (user: any) => {
-    setEditUserId(user.id);
-    setEditUser({ name: user.name, email: user.email });
-    setEditUserModalOpen(true);
-  };
-
-  const handleSaveUser = async (id: number) => {
-    setLoading(true);
-    setError('');
-    const res = await updateUser(id, editUser);
-    if (res.success) {
-      setEditUserId(null);
-      setEditUserModalOpen(false);
-      fetchUsers().then(res => { if (res.success) setUsers(res.data); });
-    } else {
-      setError(res.message || '사용자 수정 실패');
-    }
-    setLoading(false);
-  };
-
-  const handleEditPost = (post: any) => {
-    setEditPostId(post.id);
-    setEditPost({ title: post.title, content: post.content, userId: String(post.userId) });
-    setEditPostModalOpen(true);
-  };
-
-  const handleSavePost = async (id: number) => {
-    setLoading(true);
-    setError('');
-    const res = await updatePost(id, { ...editPost, userId: Number(editPost.userId) });
-    if (res.success) {
-      setEditPostId(null);
-      setEditPostModalOpen(false);
-      fetchPosts().then(res => { if (res.success) setPosts(res.data); });
-    } else {
-      setError(res.message || '게시글 수정 실패');
-    }
-    setLoading(false);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 p-6 text-foreground">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 relative">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-white">{t('driver.dashboard.title')}</h1>
-              <p className="text-gray-300 mt-1">{t('driver.dashboard.welcome')}</p>
+            {/* 좌측: 홈버튼 */}
+            <div className="flex items-center gap-4 min-w-[180px]">
+              <Logo />
             </div>
-            <div className="flex items-center gap-4">
+            {/* 중앙: 제목/부제목 */}
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center w-full pointer-events-none">
+              <h1 className="text-3xl font-bold text-white pointer-events-auto">{t('driver.dashboard.title')}</h1>
+              <p className="text-gray-300 mt-1 pointer-events-auto">{t('driver.dashboard.welcome')}</p>
+            </div>
+            {/* 우측: (필요시) 버튼 등 */}
+            <div className="flex items-center gap-4 min-w-[220px] justify-end">
               <Badge className="status-active">
                 <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
                 {t('driver.dashboard.online')}
@@ -211,126 +139,6 @@ const DriverDashboard = () => {
             </div>
           </div>
         </div>
-
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-white">운전자 등록</h2>
-          <form onSubmit={handleAddUser} className="flex gap-2 mb-2">
-            <input
-              className="px-2 py-1 rounded text-black"
-              placeholder="이름"
-              value={newUser.name}
-              onChange={e => setNewUser({ ...newUser, name: e.target.value })}
-              required
-            />
-            <input
-              className="px-2 py-1 rounded text-black"
-              placeholder="이메일"
-              value={newUser.email}
-              onChange={e => setNewUser({ ...newUser, email: e.target.value })}
-              required
-            />
-            <button type="submit" className="bg-blue-600 text-white px-3 py-1 rounded" disabled={loading}>추가</button>
-          </form>
-        </div>
-
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-white">게시글 등록</h2>
-          <form onSubmit={handleAddPost} className="flex flex-col gap-2 mb-2">
-            <input
-              className="px-2 py-1 rounded text-black"
-              placeholder="제목"
-              value={newPost.title}
-              onChange={e => setNewPost({ ...newPost, title: e.target.value })}
-              required
-            />
-            <textarea
-              className="px-2 py-1 rounded text-black"
-              placeholder="내용"
-              value={newPost.content}
-              onChange={e => setNewPost({ ...newPost, content: e.target.value })}
-              required
-            />
-            <select
-              className="px-2 py-1 rounded text-black"
-              value={newPost.userId}
-              onChange={e => setNewPost({ ...newPost, userId: e.target.value })}
-              required
-            >
-              <option value="">작성자 선택</option>
-              {users.map((user: any) => (
-                <option key={user.id} value={user.id}>{user.name}</option>
-              ))}
-            </select>
-            <button type="submit" className="bg-green-600 text-white px-3 py-1 rounded" disabled={loading}>등록</button>
-          </form>
-          {error && <div className="text-red-400">{error}</div>}
-        </div>
-
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-white">운전자 목록 (API 연동)</h2>
-          <ul className="text-white">
-            {users.map((user: any) => (
-              <li key={user.id} className="flex items-center gap-2">
-                {user.name} ({user.email})
-                <button onClick={() => handleEditUser(user)} className="ml-2 px-2 py-0.5 bg-yellow-600 text-white rounded text-xs">수정</button>
-                <button onClick={() => handleDeleteUser(user.id)} className="px-2 py-0.5 bg-red-600 text-white rounded text-xs" disabled={loading}>삭제</button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {editUserModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-sm">
-              <h3 className="text-lg font-bold mb-2 text-gray-900">사용자 수정</h3>
-              <label className="block text-gray-700 mb-1">이름</label>
-              <input className="w-full mb-2 px-2 py-1 rounded border text-black placeholder-gray-400" value={editUser.name} onChange={e => setEditUser({ ...editUser, name: e.target.value })} placeholder="이름" />
-              <label className="block text-gray-700 mb-1">이메일</label>
-              <input className="w-full mb-2 px-2 py-1 rounded border text-black placeholder-gray-400" value={editUser.email} onChange={e => setEditUser({ ...editUser, email: e.target.value })} placeholder="이메일" />
-              <div className="flex gap-2 justify-end">
-                <button onClick={() => setEditUserModalOpen(false)} className="px-3 py-1 bg-gray-400 text-white rounded">취소</button>
-                <button onClick={() => handleSaveUser(editUserId!)} className="px-3 py-1 bg-green-600 text-white rounded" disabled={loading}>저장</button>
-              </div>
-              {error && <div className="text-red-500 mt-2">{error}</div>}
-            </div>
-          </div>
-        )}
-
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-white">게시글 목록 (API 연동)</h2>
-          <ul className="text-white">
-            {posts.map((post: any) => (
-              <li key={post.id} className="flex items-center gap-2">
-                {post.title} - {post.content} (작성자: {post.author?.name || post.userId})
-                <button onClick={() => handleEditPost(post)} className="ml-2 px-2 py-0.5 bg-yellow-600 text-white rounded text-xs">수정</button>
-                <button onClick={() => handleDeletePost(post.id)} className="px-2 py-0.5 bg-red-600 text-white rounded text-xs" disabled={loading}>삭제</button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {editPostModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-lg font-bold mb-2 text-gray-900">게시글 수정</h3>
-              <label className="block text-gray-700 mb-1">제목</label>
-              <input className="w-full mb-2 px-2 py-1 rounded border text-black placeholder-gray-400" value={editPost.title} onChange={e => setEditPost({ ...editPost, title: e.target.value })} placeholder="제목" />
-              <label className="block text-gray-700 mb-1">내용</label>
-              <input className="w-full mb-2 px-2 py-1 rounded border text-black placeholder-gray-400" value={editPost.content} onChange={e => setEditPost({ ...editPost, content: e.target.value })} placeholder="내용" />
-              <label className="block text-gray-700 mb-1">작성자</label>
-              <select className="w-full mb-2 px-2 py-1 rounded border text-black" value={editPost.userId} onChange={e => setEditPost({ ...editPost, userId: e.target.value })}>
-                {users.map((user: any) => (
-                  <option key={user.id} value={user.id}>{user.name}</option>
-                ))}
-              </select>
-              <div className="flex gap-2 justify-end">
-                <button onClick={() => setEditPostModalOpen(false)} className="px-3 py-1 bg-gray-400 text-white rounded">취소</button>
-                <button onClick={() => handleSavePost(editPostId!)} className="px-3 py-1 bg-green-600 text-white rounded" disabled={loading}>저장</button>
-              </div>
-              {error && <div className="text-red-500 mt-2">{error}</div>}
-            </div>
-          </div>
-        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -490,8 +298,35 @@ const DriverDashboard = () => {
             </Card>
           </div>
 
-          {/* Right Column - Vehicle Status & Notifications */}
+          {/* Right Column - Quick Actions, Vehicle Status, Notifications */}
           <div className="space-y-6">
+            {/* Quick Actions */}
+            <Card className="bg-gray-800 border-gray-700 rounded-xl shadow-lg p-6">
+              <CardHeader>
+                <CardTitle className="text-lg text-white">{t('driver.quickActions')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <Button variant="outline" className="w-full justify-start text-white border-gray-600" onClick={() => {}}>
+                    <Clock className="w-4 h-4 mr-2 text-complementary" />
+                    공차 예정 정보 추가
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start text-white border-gray-600">
+                    <MapPin className="w-4 h-4 mr-2 text-complementary" />
+                    {t('driver.updatePreferredRoutes')}
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start text-white border-gray-600">
+                    <Star className="w-4 h-4 mr-2 text-complementary" />
+                    {t('driver.viewRatingReviews')}
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start text-white border-gray-600">
+                    <DollarSign className="w-4 h-4 mr-2 text-complementary" />
+                    {t('driver.earningsReport')}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Vehicle Status */}
             <Card className="bg-gray-800 border-gray-700 rounded-xl shadow-lg p-6">
               <CardHeader>
@@ -552,33 +387,6 @@ const DriverDashboard = () => {
                       <p className="text-xs text-gray-300">{t('driver.nextServiceDue')}</p>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card className="bg-gray-800 border-gray-700 rounded-xl shadow-lg p-6">
-              <CardHeader>
-                <CardTitle className="text-lg text-white">{t('driver.quickActions')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <Button variant="outline" className="w-full justify-start text-white border-gray-600">
-                    <Clock className="w-4 h-4 mr-2 text-complementary" />
-                    {t('driver.setAvailableHours')}
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start text-white border-gray-600">
-                    <MapPin className="w-4 h-4 mr-2 text-complementary" />
-                    {t('driver.updatePreferredRoutes')}
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start text-white border-gray-600">
-                    <Star className="w-4 h-4 mr-2 text-complementary" />
-                    {t('driver.viewRatingReviews')}
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start text-white border-gray-600">
-                    <DollarSign className="w-4 h-4 mr-2 text-complementary" />
-                    {t('driver.earningsReport')}
-                  </Button>
                 </div>
               </CardContent>
             </Card>

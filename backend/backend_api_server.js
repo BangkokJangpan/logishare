@@ -22,8 +22,16 @@ app.use(limiter);
 
 // 임시 데이터 저장소 (실제로는 데이터베이스 사용)
 let users = [
-  { id: 1, name: '김철수', email: 'kim@example.com', createdAt: new Date() },
-  { id: 2, name: '이영희', email: 'lee@example.com', createdAt: new Date() }
+  // 권한 A (최고)
+  { phone: '010-1111-0001', password: 'pwA1', name: '관리자A', email: 'adminA@example.com', role: 'A', createdAt: new Date() },
+  // 권한 B
+  { phone: '010-2222-0002', password: 'pwB1', name: '매니저B', email: 'managerB@example.com', role: 'B', createdAt: new Date() },
+  // 권한 C
+  { phone: '010-3333-0003', password: 'pwC1', name: '직원C', email: 'staffC@example.com', role: 'C', createdAt: new Date() },
+  // 권한 D
+  { phone: '010-4444-0004', password: 'pwD1', name: '외주D', email: 'partnerD@example.com', role: 'D', createdAt: new Date() },
+  // 권한 E (최하)
+  { phone: '010-5555-0005', password: 'pwE1', name: '게스트E', email: 'guestE@example.com', role: 'E', createdAt: new Date() }
 ];
 
 let posts = [
@@ -32,7 +40,7 @@ let posts = [
 ];
 
 // 유틸리티 함수
-const findUserById = (id) => users.find(user => user.id === parseInt(id));
+const findUserByPhone = (phone) => users.find(user => user.phone === phone);
 const findPostById = (id) => posts.find(post => post.id === parseInt(id));
 const generateId = (array) => Math.max(...array.map(item => item.id), 0) + 1;
 
@@ -78,9 +86,9 @@ app.get('/api/users', (req, res) => {
 });
 
 // 특정 사용자 조회
-app.get('/api/users/:id', (req, res) => {
+app.get('/api/users/:phone', (req, res) => {
   try {
-    const user = findUserById(req.params.id);
+    const user = findUserByPhone(req.params.phone);
     
     if (!user) {
       return res.status(404).json({
@@ -141,13 +149,13 @@ app.post('/api/users', [
 });
 
 // 사용자 정보 수정
-app.put('/api/users/:id', [
+app.put('/api/users/:phone', [
   body('name').optional().trim().isLength({ min: 2 }).withMessage('이름은 최소 2글자 이상이어야 합니다'),
   body('email').optional().isEmail().withMessage('유효한 이메일 주소를 입력해주세요')
 ], handleValidationErrors, (req, res) => {
   try {
-    const userId = parseInt(req.params.id);
-    const userIndex = users.findIndex(user => user.id === userId);
+    const phone = req.params.phone;
+    const userIndex = users.findIndex(user => user.phone === phone);
     
     if (userIndex === -1) {
       return res.status(404).json({
@@ -160,7 +168,7 @@ app.put('/api/users/:id', [
     
     // 이메일 중복 확인 (자신 제외)
     if (email) {
-      const existingUser = users.find(user => user.email === email && user.id !== userId);
+      const existingUser = users.find(user => user.email === email && user.phone !== phone);
       if (existingUser) {
         return res.status(409).json({
           success: false,
@@ -190,10 +198,10 @@ app.put('/api/users/:id', [
 });
 
 // 사용자 삭제
-app.delete('/api/users/:id', (req, res) => {
+app.delete('/api/users/:phone', (req, res) => {
   try {
-    const userId = parseInt(req.params.id);
-    const userIndex = users.findIndex(user => user.id === userId);
+    const phone = req.params.phone;
+    const userIndex = users.findIndex(user => user.phone === phone);
     
     if (userIndex === -1) {
       return res.status(404).json({
@@ -203,7 +211,7 @@ app.delete('/api/users/:id', (req, res) => {
     }
     
     // 해당 사용자의 포스트도 함께 삭제
-    posts = posts.filter(post => post.userId !== userId);
+    posts = posts.filter(post => post.userId !== phone);
     users.splice(userIndex, 1);
     
     res.json({
@@ -227,7 +235,7 @@ app.get('/api/posts', (req, res) => {
     
     let filteredPosts = posts;
     if (userId) {
-      filteredPosts = posts.filter(post => post.userId === parseInt(userId));
+      filteredPosts = posts.filter(post => post.userId === userId);
     }
     
     const startIndex = (page - 1) * limit;
@@ -237,7 +245,7 @@ app.get('/api/posts', (req, res) => {
     // 작성자 정보 포함
     const postsWithAuthor = paginatedPosts.map(post => ({
       ...post,
-      author: findUserById(post.userId)
+      author: findUserByPhone(post.userId)
     }));
     
     res.json({
@@ -271,7 +279,7 @@ app.get('/api/posts/:id', (req, res) => {
     
     const postWithAuthor = {
       ...post,
-      author: findUserById(post.userId)
+      author: findUserByPhone(post.userId)
     };
     
     res.json({
@@ -296,7 +304,7 @@ app.post('/api/posts', [
     const { title, content, userId } = req.body;
     
     // 사용자 존재 확인
-    if (!findUserById(userId)) {
+    if (!findUserByPhone(userId)) {
       return res.status(404).json({
         success: false,
         message: '존재하지 않는 사용자입니다'
@@ -318,7 +326,7 @@ app.post('/api/posts', [
       message: '포스트가 성공적으로 생성되었습니다',
       data: {
         ...newPost,
-        author: findUserById(userId)
+        author: findUserByPhone(userId)
       }
     });
   } catch (error) {
@@ -359,7 +367,7 @@ app.put('/api/posts/:id', [
       message: '포스트가 성공적으로 수정되었습니다',
       data: {
         ...posts[postIndex],
-        author: findUserById(posts[postIndex].userId)
+        author: findUserByPhone(posts[postIndex].userId)
       }
     });
   } catch (error) {
@@ -404,9 +412,9 @@ app.get('/api/stats', (req, res) => {
       totalUsers: users.length,
       totalPosts: posts.length,
       postsPerUser: users.map(user => ({
-        userId: user.id,
+        userId: user.phone,
         userName: user.name,
-        postCount: posts.filter(post => post.userId === user.id).length
+        postCount: posts.filter(post => post.userId === user.phone).length
       }))
     };
     
