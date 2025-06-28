@@ -279,6 +279,140 @@ const AdminPage = () => {
     }
   };
 
+  // 공차 운행 등록 팝업 상태 및 핸들러
+  const [emptyRunDialogOpen, setEmptyRunDialogOpen] = React.useState(false);
+  const [emptyRuns, setEmptyRuns] = React.useState([
+    { id: 3001, vehicleId: 2001, driverId: 1001, companyId: 1001, startLocation: '서울', endLocation: '부산', startTime: '2024-01-15 09:00', endTime: '2024-01-15 18:00', capacity: 3000, status: '예정' },
+    { id: 3002, vehicleId: 2002, driverId: 1002, companyId: 1002, startLocation: '대구', endLocation: '인천', startTime: '2024-01-16 10:00', endTime: '2024-01-16 19:00', capacity: 2500, status: '진행중' },
+    { id: 3003, vehicleId: 2003, driverId: 1003, companyId: 1003, startLocation: '광주', endLocation: '대전', startTime: '2024-01-17 08:00', endTime: '2024-01-17 17:00', capacity: 4000, status: '완료' }
+  ]);
+  const [emptyRunForm, setEmptyRunForm] = React.useState({ 
+    id: '', vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', 
+    startTime: '', endTime: '', capacity: '', status: '' 
+  });
+  const [editEmptyRunId, setEditEmptyRunId] = React.useState(null);
+
+  const handleEmptyRunChange = e => {
+    const { name, value } = e.target;
+    if (name === 'id' || name === 'vehicleId' || name === 'driverId' || name === 'companyId' || name === 'capacity') {
+      const onlyNums = value.replace(/[^0-9]/g, '');
+      setEmptyRunForm(prev => ({ ...prev, [name]: onlyNums }));
+    } else {
+      setEmptyRunForm(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleEmptyRunSubmit = e => {
+    e.preventDefault();
+    if (!emptyRunForm.id || !emptyRunForm.vehicleId || !emptyRunForm.startLocation || !emptyRunForm.endLocation) return;
+    if (editEmptyRunId) {
+      setEmptyRuns(emptyRuns.map(er => er.id === editEmptyRunId ? { 
+        ...emptyRunForm, 
+        id: Number(emptyRunForm.id), 
+        vehicleId: Number(emptyRunForm.vehicleId), 
+        driverId: Number(emptyRunForm.driverId), 
+        companyId: Number(emptyRunForm.companyId), 
+        capacity: Number(emptyRunForm.capacity) 
+      } : er));
+      setEditEmptyRunId(null);
+    } else {
+      if (emptyRuns.some(er => er.id === Number(emptyRunForm.id))) return;
+      setEmptyRuns([...emptyRuns, { 
+        ...emptyRunForm, 
+        id: Number(emptyRunForm.id), 
+        vehicleId: Number(emptyRunForm.vehicleId), 
+        driverId: Number(emptyRunForm.driverId), 
+        companyId: Number(emptyRunForm.companyId), 
+        capacity: Number(emptyRunForm.capacity) 
+      }]);
+    }
+    setEmptyRunForm({ id: '', vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', startTime: '', endTime: '', capacity: '', status: '' });
+  };
+
+  const handleEmptyRunEdit = emptyRun => {
+    setEmptyRunForm({ 
+      ...emptyRun, 
+      id: String(emptyRun.id), 
+      vehicleId: String(emptyRun.vehicleId), 
+      driverId: String(emptyRun.driverId), 
+      companyId: String(emptyRun.companyId), 
+      capacity: String(emptyRun.capacity) 
+    });
+    setEditEmptyRunId(emptyRun.id);
+  };
+
+  const handleEmptyRunDelete = id => {
+    setEmptyRuns(emptyRuns.filter(er => er.id !== id));
+    if (editEmptyRunId === id) {
+      setEmptyRunForm({ id: '', vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', startTime: '', endTime: '', capacity: '', status: '' });
+      setEditEmptyRunId(null);
+    }
+  };
+
+  // 물류 요청 팝업 상태 및 핸들러
+  const [logisticsRequestDialogOpen, setLogisticsRequestDialogOpen] = React.useState(false);
+  const [logisticsRequests, setLogisticsRequests] = React.useState([
+    { id: 4001, shipperId: 1001, cargoType: '전자제품', startLocation: '서울', endLocation: '부산', startTime: '2024-01-15 10:00', endTime: '2024-01-15 20:00', weight: 5000, priority: '긴급', status: '대기중' },
+    { id: 4002, shipperId: 1002, cargoType: '자동차부품', startLocation: '대구', endLocation: '인천', startTime: '2024-01-16 09:00', endTime: '2024-01-16 18:00', weight: 3000, priority: '일반', status: '진행중' },
+    { id: 4003, shipperId: 1003, cargoType: '식품', startLocation: '광주', endLocation: '대전', startTime: '2024-01-17 08:00', endTime: '2024-01-17 17:00', weight: 2000, priority: '특급', status: '완료' }
+  ]);
+  const [logisticsRequestForm, setLogisticsRequestForm] = React.useState({ 
+    id: '', shipperId: '', cargoType: '', startLocation: '', endLocation: '', 
+    startTime: '', endTime: '', weight: '', priority: '', status: '' 
+  });
+  const [editLogisticsRequestId, setEditLogisticsRequestId] = React.useState(null);
+
+  const handleLogisticsRequestChange = e => {
+    const { name, value } = e.target;
+    if (name === 'id' || name === 'shipperId' || name === 'weight') {
+      const onlyNums = value.replace(/[^0-9]/g, '');
+      setLogisticsRequestForm(prev => ({ ...prev, [name]: onlyNums }));
+    } else {
+      setLogisticsRequestForm(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleLogisticsRequestSubmit = e => {
+    e.preventDefault();
+    if (!logisticsRequestForm.id || !logisticsRequestForm.shipperId || !logisticsRequestForm.startLocation || !logisticsRequestForm.endLocation) return;
+    if (editLogisticsRequestId) {
+      setLogisticsRequests(logisticsRequests.map(lr => lr.id === editLogisticsRequestId ? { 
+        ...logisticsRequestForm, 
+        id: Number(logisticsRequestForm.id), 
+        shipperId: Number(logisticsRequestForm.shipperId), 
+        weight: Number(logisticsRequestForm.weight) 
+      } : lr));
+      setEditLogisticsRequestId(null);
+    } else {
+      if (logisticsRequests.some(lr => lr.id === Number(logisticsRequestForm.id))) return;
+      setLogisticsRequests([...logisticsRequests, { 
+        ...logisticsRequestForm, 
+        id: Number(logisticsRequestForm.id), 
+        shipperId: Number(logisticsRequestForm.shipperId), 
+        weight: Number(logisticsRequestForm.weight) 
+      }]);
+    }
+    setLogisticsRequestForm({ id: '', shipperId: '', cargoType: '', startLocation: '', endLocation: '', startTime: '', endTime: '', weight: '', priority: '', status: '' });
+  };
+
+  const handleLogisticsRequestEdit = logisticsRequest => {
+    setLogisticsRequestForm({ 
+      ...logisticsRequest, 
+      id: String(logisticsRequest.id), 
+      shipperId: String(logisticsRequest.shipperId), 
+      weight: String(logisticsRequest.weight) 
+    });
+    setEditLogisticsRequestId(logisticsRequest.id);
+  };
+
+  const handleLogisticsRequestDelete = id => {
+    setLogisticsRequests(logisticsRequests.filter(lr => lr.id !== id));
+    if (editLogisticsRequestId === id) {
+      setLogisticsRequestForm({ id: '', shipperId: '', cargoType: '', startLocation: '', endLocation: '', startTime: '', endTime: '', weight: '', priority: '', status: '' });
+      setEditLogisticsRequestId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 p-6 text-foreground">
       <div className="max-w-7xl mx-auto">
@@ -430,33 +564,63 @@ const AdminPage = () => {
                 <CardTitle className="text-lg text-white">{t('admin.platformManagement.title')}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  <Button variant="outline" className="w-full justify-start text-white" onClick={() => setUserDialogOpen(true)}>
-                    <Users className="w-4 h-4 mr-2" />
+                {/* 4개 주요 버튼: 2열 그리드로 배치 */}
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-foreground border-border"
+                    onClick={() => setUserDialogOpen(true)}
+                  >
+                    <Users className="w-4 h-4 mr-2 text-complementary" />
                     {t('admin.platformManagement.manageUsers')}
                   </Button>
-                  <Button variant="outline" className="w-full justify-start text-white" onClick={() => setCompanyDialogOpen(true)}>
-                    <Building className="w-4 h-4 mr-2" />
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-foreground border-border"
+                    onClick={() => setCompanyDialogOpen(true)}
+                  >
+                    <Building className="w-4 h-4 mr-2 text-complementary" />
                     {t('admin.platformManagement.manageCompanies')}
                   </Button>
-                  <Button variant="outline" className="w-full justify-start text-white" onClick={() => setVehicleDialogOpen(true)}>
-                    <Truck className="w-4 h-4 mr-2" />
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-foreground border-border"
+                    onClick={() => setVehicleDialogOpen(true)}
+                  >
+                    <Truck className="w-4 h-4 mr-2 text-complementary" />
                     {t('admin.platformManagement.manageVehicles')}
                   </Button>
-                  <Button variant="outline" className="w-full justify-start text-white" onClick={() => setDriverDialogOpen(true)}>
-                    <User className="w-4 h-4 mr-2" />
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-foreground border-border"
+                    onClick={() => setDriverDialogOpen(true)}
+                  >
+                    <User className="w-4 h-4 mr-2 text-complementary" />
                     {t('admin.platformManagement.manageDrivers')}
                   </Button>
-                  <Button variant="outline" className="w-full justify-start text-white">
-                    <DollarSign className="w-4 h-4 mr-2" />
+                </div>
+                {/* 신규 버튼 2개: 한 줄에 하나씩 세로로 배치 */}
+                <div className="space-y-3 mt-3">
+                  {/* 물류 요청 버튼 완전 삭제 */}
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-foreground border-border"
+                  >
+                    <DollarSign className="w-4 h-4 mr-2 text-complementary" />
                     {t('admin.platformManagement.paymentSettings')}
                   </Button>
-                  <Button variant="outline" className="w-full justify-start text-white">
-                    <BarChart3 className="w-4 h-4 mr-2" />
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-foreground border-border"
+                  >
+                    <BarChart3 className="w-4 h-4 mr-2 text-complementary" />
                     {t('admin.platformManagement.analyticsReports')}
                   </Button>
-                  <Button variant="outline" className="w-full justify-start text-white">
-                    <AlertTriangle className="w-4 h-4 mr-2" />
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-foreground border-border"
+                  >
+                    <AlertTriangle className="w-4 h-4 mr-2 text-complementary" />
                     {t('admin.platformManagement.systemMaintenance')}
                   </Button>
                 </div>
@@ -952,6 +1116,346 @@ const AdminPage = () => {
         </DialogContent>
       </Dialog>
 
+      {/* 공차 운행 등록 팝업 */}
+      <Dialog open={emptyRunDialogOpen} onOpenChange={setEmptyRunDialogOpen}>
+        <DialogContent className="max-w-6xl w-full bg-[#102040] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white">{t('emptyRun.title')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4 overflow-x-auto">
+            <form className="flex flex-wrap gap-2 min-w-[1200px]" onSubmit={handleEmptyRunSubmit}>
+              <input
+                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder={t('emptyRun.vehicle')}
+                name="vehicleId"
+                value={emptyRunForm.vehicleId}
+                onChange={handleEmptyRunChange}
+                required
+              />
+              <input
+                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder={t('emptyRun.driver')}
+                name="driverId"
+                value={emptyRunForm.driverId}
+                onChange={handleEmptyRunChange}
+                required
+              />
+              <input
+                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder="회사ID"
+                name="companyId"
+                value={emptyRunForm.companyId}
+                onChange={handleEmptyRunChange}
+                required
+              />
+              <input
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder={t('emptyRun.startLocation')}
+                name="startLocation"
+                value={emptyRunForm.startLocation}
+                onChange={handleEmptyRunChange}
+                required
+              />
+              <input
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder={t('emptyRun.endLocation')}
+                name="endLocation"
+                value={emptyRunForm.endLocation}
+                onChange={handleEmptyRunChange}
+                required
+              />
+              <input
+                type="datetime-local"
+                className="flex-1 min-w-[180px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                name="startTime"
+                value={emptyRunForm.startTime}
+                onChange={handleEmptyRunChange}
+                required
+              />
+              <input
+                type="datetime-local"
+                className="flex-1 min-w-[180px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                name="endTime"
+                value={emptyRunForm.endTime}
+                onChange={handleEmptyRunChange}
+                required
+              />
+              <input
+                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder={t('emptyRun.capacity')}
+                name="capacity"
+                value={emptyRunForm.capacity}
+                onChange={handleEmptyRunChange}
+                required
+              />
+              <select
+                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                name="status"
+                value={emptyRunForm.status}
+                onChange={handleEmptyRunChange}
+                required
+              >
+                <option value="">{t('emptyRun.status')}</option>
+                <option value="예정">예정</option>
+                <option value="진행중">진행중</option>
+                <option value="완료">완료</option>
+                <option value="취소">취소</option>
+              </select>
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                {editEmptyRunId ? t('emptyRun.save') : t('emptyRun.register')}
+              </Button>
+              {editEmptyRunId && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="border-gray-400 text-gray-200" 
+                  onClick={() => { 
+                    setEmptyRunForm({ id: '', vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', startTime: '', endTime: '', capacity: '', status: '' }); 
+                    setEditEmptyRunId(null); 
+                  }}
+                >
+                  {t('emptyRun.cancel')}
+                </Button>
+              )}
+            </form>
+            <Table className="min-w-[1200px] w-full">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-white">ID</TableHead>
+                  <TableHead className="text-white">{t('emptyRun.vehicle')}</TableHead>
+                  <TableHead className="text-white">{t('emptyRun.driver')}</TableHead>
+                  <TableHead className="text-white">회사ID</TableHead>
+                  <TableHead className="text-white">{t('emptyRun.startLocation')}</TableHead>
+                  <TableHead className="text-white">{t('emptyRun.endLocation')}</TableHead>
+                  <TableHead className="text-white">{t('emptyRun.startTime')}</TableHead>
+                  <TableHead className="text-white">{t('emptyRun.endTime')}</TableHead>
+                  <TableHead className="text-white">{t('emptyRun.capacity')}</TableHead>
+                  <TableHead className="text-white">{t('emptyRun.status')}</TableHead>
+                  <TableHead className="text-white">{t('emptyRun.action')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {emptyRuns.map((emptyRun) => (
+                  <TableRow key={emptyRun.id} className="bg-[#1a2a40] border-blue-900">
+                    <TableCell className="text-white">{emptyRun.id}</TableCell>
+                    <TableCell className="text-white">{emptyRun.vehicleId}</TableCell>
+                    <TableCell className="text-white">{emptyRun.driverId}</TableCell>
+                    <TableCell className="text-white">{emptyRun.companyId}</TableCell>
+                    <TableCell className="text-white">{emptyRun.startLocation}</TableCell>
+                    <TableCell className="text-white">{emptyRun.endLocation}</TableCell>
+                    <TableCell className="text-white">{emptyRun.startTime?.replace('T', ' ')}</TableCell>
+                    <TableCell className="text-white">{emptyRun.endTime?.replace('T', ' ')}</TableCell>
+                    <TableCell className="text-white">{emptyRun.capacity}</TableCell>
+                    <TableCell className="text-white">{emptyRun.status}</TableCell>
+                    <TableCell>
+                      <Button 
+                        size="sm" 
+                        className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold mr-2" 
+                        onClick={() => handleEmptyRunEdit(emptyRun)}
+                      >
+                        {t('emptyRun.edit')}
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold" 
+                        onClick={() => handleEmptyRunDelete(emptyRun.id)}
+                      >
+                        {t('emptyRun.delete')}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="border-gray-400 text-gray-200" onClick={() => setEmptyRunDialogOpen(false)}>
+              {t('emptyRun.cancel')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 물류 요청 팝업 */}
+      <Dialog open={logisticsRequestDialogOpen} onOpenChange={setLogisticsRequestDialogOpen}>
+        <DialogContent className="max-w-6xl w-full bg-[#102040] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white">{t('logisticsRequest.title')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4 overflow-x-auto">
+            <form className="flex flex-wrap gap-2 min-w-[1200px]" onSubmit={handleLogisticsRequestSubmit}>
+              <input
+                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder={t('logisticsRequest.id')}
+                name="id"
+                value={logisticsRequestForm.id}
+                onChange={handleLogisticsRequestChange}
+                required
+                disabled={!!editLogisticsRequestId}
+              />
+              <input
+                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder={t('logisticsRequest.shipperId')}
+                name="shipperId"
+                value={logisticsRequestForm.shipperId}
+                onChange={handleLogisticsRequestChange}
+                required
+              />
+              <select
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                name="cargoType"
+                value={logisticsRequestForm.cargoType}
+                onChange={handleLogisticsRequestChange}
+                required
+              >
+                <option value="">{t('logisticsRequest.cargoType')}</option>
+                <option value="전자제품">전자제품</option>
+                <option value="자동차부품">자동차부품</option>
+                <option value="식품">식품</option>
+                <option value="가구">가구</option>
+                <option value="의류">의류</option>
+                <option value="기타">기타</option>
+              </select>
+              <input
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder={t('logisticsRequest.startLocation')}
+                name="startLocation"
+                value={logisticsRequestForm.startLocation}
+                onChange={handleLogisticsRequestChange}
+                required
+              />
+              <input
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder={t('logisticsRequest.endLocation')}
+                name="endLocation"
+                value={logisticsRequestForm.endLocation}
+                onChange={handleLogisticsRequestChange}
+                required
+              />
+              <input
+                type="datetime-local"
+                className="flex-1 min-w-[180px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                name="startTime"
+                value={logisticsRequestForm.startTime}
+                onChange={handleLogisticsRequestChange}
+                required
+              />
+              <input
+                type="datetime-local"
+                className="flex-1 min-w-[180px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                name="endTime"
+                value={logisticsRequestForm.endTime}
+                onChange={handleLogisticsRequestChange}
+                required
+              />
+              <input
+                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder={t('logisticsRequest.weight')}
+                name="weight"
+                value={logisticsRequestForm.weight}
+                onChange={handleLogisticsRequestChange}
+                required
+              />
+              <select
+                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                name="priority"
+                value={logisticsRequestForm.priority}
+                onChange={handleLogisticsRequestChange}
+                required
+              >
+                <option value="">{t('logisticsRequest.priority')}</option>
+                <option value="일반">일반</option>
+                <option value="긴급">긴급</option>
+                <option value="특급">특급</option>
+              </select>
+              <select
+                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                name="status"
+                value={logisticsRequestForm.status}
+                onChange={handleLogisticsRequestChange}
+                required
+              >
+                <option value="">{t('logisticsRequest.status')}</option>
+                <option value="대기중">대기중</option>
+                <option value="진행중">진행중</option>
+                <option value="완료">완료</option>
+                <option value="취소">취소</option>
+              </select>
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                {editLogisticsRequestId ? t('logisticsRequest.save') : t('logisticsRequest.register')}
+              </Button>
+              {editLogisticsRequestId && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="border-gray-400 text-gray-200" 
+                  onClick={() => { 
+                    setLogisticsRequestForm({ id: '', shipperId: '', cargoType: '', startLocation: '', endLocation: '', startTime: '', endTime: '', weight: '', priority: '', status: '' }); 
+                    setEditLogisticsRequestId(null); 
+                  }}
+                >
+                  {t('logisticsRequest.cancel')}
+                </Button>
+              )}
+            </form>
+            <Table className="min-w-[1200px] w-full">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-white">{t('logisticsRequest.id')}</TableHead>
+                  <TableHead className="text-white">{t('logisticsRequest.shipperId')}</TableHead>
+                  <TableHead className="text-white">{t('logisticsRequest.cargoType')}</TableHead>
+                  <TableHead className="text-white">{t('logisticsRequest.startLocation')}</TableHead>
+                  <TableHead className="text-white">{t('logisticsRequest.endLocation')}</TableHead>
+                  <TableHead className="text-white">{t('logisticsRequest.startTime')}</TableHead>
+                  <TableHead className="text-white">{t('logisticsRequest.endTime')}</TableHead>
+                  <TableHead className="text-white">{t('logisticsRequest.weight')}</TableHead>
+                  <TableHead className="text-white">{t('logisticsRequest.priority')}</TableHead>
+                  <TableHead className="text-white">{t('logisticsRequest.status')}</TableHead>
+                  <TableHead className="text-white">{t('logisticsRequest.action')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {logisticsRequests.map((logisticsRequest) => (
+                  <TableRow key={logisticsRequest.id} className="bg-[#1a2a40] border-blue-900">
+                    <TableCell className="text-white">{logisticsRequest.id}</TableCell>
+                    <TableCell className="text-white">{logisticsRequest.shipperId}</TableCell>
+                    <TableCell className="text-white">{logisticsRequest.cargoType}</TableCell>
+                    <TableCell className="text-white">{logisticsRequest.startLocation}</TableCell>
+                    <TableCell className="text-white">{logisticsRequest.endLocation}</TableCell>
+                    <TableCell className="text-white">{logisticsRequest.startTime?.replace('T', ' ')}</TableCell>
+                    <TableCell className="text-white">{logisticsRequest.endTime?.replace('T', ' ')}</TableCell>
+                    <TableCell className="text-white">{logisticsRequest.weight}</TableCell>
+                    <TableCell className="text-white">{logisticsRequest.priority}</TableCell>
+                    <TableCell className="text-white">{logisticsRequest.status}</TableCell>
+                    <TableCell>
+                      <Button 
+                        size="sm" 
+                        className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold mr-2" 
+                        onClick={() => handleLogisticsRequestEdit(logisticsRequest)}
+                      >
+                        {t('logisticsRequest.edit')}
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold" 
+                        onClick={() => handleLogisticsRequestDelete(logisticsRequest.id)}
+                      >
+                        {t('logisticsRequest.delete')}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="border-gray-400 text-gray-200" onClick={() => setLogisticsRequestDialogOpen(false)}>
+              {t('logisticsRequest.cancel')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={tripDialogOpen} onOpenChange={setTripDialogOpen}>
         <DialogContent className="max-w-6xl w-full bg-[#102040] text-white">
           <DialogHeader>
@@ -1039,7 +1543,9 @@ const AdminPage = () => {
             </Table>
           </div>
           <DialogFooter>
-            <Button variant="outline" className="border-gray-400 text-gray-200" onClick={() => setTripDialogOpen(false)}>{t('shipper.cancel')}</Button>
+            <Button variant="outline" className="border-gray-400 text-gray-200" onClick={() => setTripDialogOpen(false)}>
+              {t('shipper.cancel')}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

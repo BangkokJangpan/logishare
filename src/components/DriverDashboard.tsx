@@ -18,6 +18,22 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext';
 import { fetchUsers, fetchPosts, createUser, createPost, deleteUser, deletePost, updateUser, updatePost } from '@/lib/api';
 import Logo from '@/components/ui/Logo';
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell
+} from '@/components/ui/table';
 
 // 현재 날짜/시각 구하기
 const getToday = () => {
@@ -93,6 +109,76 @@ const DriverDashboard = () => {
   ]);
 
   const [vehicles, setVehicles] = useState([]);
+
+  // 공차 운행 등록 팝업 상태 및 핸들러
+  const [emptyRunDialogOpen, setEmptyRunDialogOpen] = useState(false);
+  const [emptyRuns, setEmptyRuns] = useState([
+    { id: 3001, vehicleId: 2001, driverId: 1001, companyId: 1001, startLocation: '서울', endLocation: '부산', startTime: '2024-01-15 09:00', endTime: '2024-01-15 18:00', capacity: 3000, status: '예정' },
+    { id: 3002, vehicleId: 2002, driverId: 1002, companyId: 1002, startLocation: '대구', endLocation: '인천', startTime: '2024-01-16 10:00', endTime: '2024-01-16 19:00', capacity: 2500, status: '진행중' },
+    { id: 3003, vehicleId: 2003, driverId: 1003, companyId: 1003, startLocation: '광주', endLocation: '대전', startTime: '2024-01-17 08:00', endTime: '2024-01-17 17:00', capacity: 4000, status: '완료' }
+  ]);
+  const [emptyRunForm, setEmptyRunForm] = useState({ 
+    id: '', vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', 
+    startTime: '', endTime: '', capacity: '', status: '' 
+  });
+  const [editEmptyRunId, setEditEmptyRunId] = useState(null);
+
+  const handleEmptyRunChange = e => {
+    const { name, value } = e.target;
+    if (name === 'id' || name === 'vehicleId' || name === 'driverId' || name === 'companyId' || name === 'capacity') {
+      const onlyNums = value.replace(/[^0-9]/g, '');
+      setEmptyRunForm(prev => ({ ...prev, [name]: onlyNums }));
+    } else {
+      setEmptyRunForm(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleEmptyRunSubmit = e => {
+    e.preventDefault();
+    if (!emptyRunForm.id || !emptyRunForm.vehicleId || !emptyRunForm.startLocation || !emptyRunForm.endLocation) return;
+    if (editEmptyRunId) {
+      setEmptyRuns(emptyRuns.map(er => er.id === editEmptyRunId ? { 
+        ...emptyRunForm, 
+        id: Number(emptyRunForm.id), 
+        vehicleId: Number(emptyRunForm.vehicleId), 
+        driverId: Number(emptyRunForm.driverId), 
+        companyId: Number(emptyRunForm.companyId), 
+        capacity: Number(emptyRunForm.capacity) 
+      } : er));
+      setEditEmptyRunId(null);
+    } else {
+      if (emptyRuns.some(er => er.id === Number(emptyRunForm.id))) return;
+      setEmptyRuns([...emptyRuns, { 
+        ...emptyRunForm, 
+        id: Number(emptyRunForm.id), 
+        vehicleId: Number(emptyRunForm.vehicleId), 
+        driverId: Number(emptyRunForm.driverId), 
+        companyId: Number(emptyRunForm.companyId), 
+        capacity: Number(emptyRunForm.capacity) 
+      }]);
+    }
+    setEmptyRunForm({ id: '', vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', startTime: '', endTime: '', capacity: '', status: '' });
+  };
+
+  const handleEmptyRunEdit = emptyRun => {
+    setEmptyRunForm({ 
+      ...emptyRun, 
+      id: String(emptyRun.id), 
+      vehicleId: String(emptyRun.vehicleId), 
+      driverId: String(emptyRun.driverId), 
+      companyId: String(emptyRun.companyId), 
+      capacity: String(emptyRun.capacity) 
+    });
+    setEditEmptyRunId(emptyRun.id);
+  };
+
+  const handleEmptyRunDelete = id => {
+    setEmptyRuns(emptyRuns.filter(er => er.id !== id));
+    if (editEmptyRunId === id) {
+      setEmptyRunForm({ id: '', vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', startTime: '', endTime: '', capacity: '', status: '' });
+      setEditEmptyRunId(null);
+    }
+  };
 
   useEffect(() => {
     // fetchUsers().then(res => {
@@ -307,7 +393,7 @@ const DriverDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <Button variant="outline" className="w-full justify-start text-white border-gray-600" onClick={() => {}}>
+                  <Button variant="outline" className="w-full justify-start text-white border-gray-600" onClick={() => setEmptyRunDialogOpen(true)}>
                     <Clock className="w-4 h-4 mr-2 text-complementary" />
                     공차 예정 정보 추가
                   </Button>
@@ -393,6 +479,166 @@ const DriverDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* 공차 운행 등록 팝업 */}
+      <Dialog open={emptyRunDialogOpen} onOpenChange={setEmptyRunDialogOpen}>
+        <DialogContent className="max-w-6xl w-full bg-[#102040] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white">{t('emptyRun.title')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4 overflow-x-auto">
+            <form className="flex flex-wrap gap-2 min-w-[1200px]" onSubmit={handleEmptyRunSubmit}>
+              <input
+                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder={t('emptyRun.vehicle')}
+                name="vehicleId"
+                value={emptyRunForm.vehicleId}
+                onChange={handleEmptyRunChange}
+                required
+              />
+              <input
+                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder={t('emptyRun.driver')}
+                name="driverId"
+                value={emptyRunForm.driverId}
+                onChange={handleEmptyRunChange}
+                required
+              />
+              <input
+                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder="회사ID"
+                name="companyId"
+                value={emptyRunForm.companyId}
+                onChange={handleEmptyRunChange}
+                required
+              />
+              <input
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder={t('emptyRun.startLocation')}
+                name="startLocation"
+                value={emptyRunForm.startLocation}
+                onChange={handleEmptyRunChange}
+                required
+              />
+              <input
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder={t('emptyRun.endLocation')}
+                name="endLocation"
+                value={emptyRunForm.endLocation}
+                onChange={handleEmptyRunChange}
+                required
+              />
+              <input
+                type="datetime-local"
+                className="flex-1 min-w-[180px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                name="startTime"
+                value={emptyRunForm.startTime}
+                onChange={handleEmptyRunChange}
+                required
+              />
+              <input
+                type="datetime-local"
+                className="flex-1 min-w-[180px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                name="endTime"
+                value={emptyRunForm.endTime}
+                onChange={handleEmptyRunChange}
+                required
+              />
+              <input
+                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder={t('emptyRun.capacity')}
+                name="capacity"
+                value={emptyRunForm.capacity}
+                onChange={handleEmptyRunChange}
+                required
+              />
+              <select
+                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                name="status"
+                value={emptyRunForm.status}
+                onChange={handleEmptyRunChange}
+                required
+              >
+                <option value="">{t('emptyRun.status')}</option>
+                <option value="예정">예정</option>
+                <option value="진행중">진행중</option>
+                <option value="완료">완료</option>
+                <option value="취소">취소</option>
+              </select>
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                {editEmptyRunId ? t('emptyRun.save') : t('emptyRun.register')}
+              </Button>
+              {editEmptyRunId && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="border-gray-400 text-gray-200" 
+                  onClick={() => { 
+                    setEmptyRunForm({ id: '', vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', startTime: '', endTime: '', capacity: '', status: '' }); 
+                    setEditEmptyRunId(null); 
+                  }}
+                >
+                  {t('emptyRun.cancel')}
+                </Button>
+              )}
+            </form>
+            <Table className="min-w-[1200px] w-full">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-white">ID</TableHead>
+                  <TableHead className="text-white">{t('emptyRun.vehicle')}</TableHead>
+                  <TableHead className="text-white">{t('emptyRun.driver')}</TableHead>
+                  <TableHead className="text-white">회사ID</TableHead>
+                  <TableHead className="text-white">{t('emptyRun.startLocation')}</TableHead>
+                  <TableHead className="text-white">{t('emptyRun.endLocation')}</TableHead>
+                  <TableHead className="text-white">{t('emptyRun.startTime')}</TableHead>
+                  <TableHead className="text-white">{t('emptyRun.endTime')}</TableHead>
+                  <TableHead className="text-white">{t('emptyRun.capacity')}</TableHead>
+                  <TableHead className="text-white">{t('emptyRun.status')}</TableHead>
+                  <TableHead className="text-white">{t('emptyRun.action')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {emptyRuns.map((emptyRun) => (
+                  <TableRow key={emptyRun.id} className="bg-[#1a2a40] border-blue-900">
+                    <TableCell className="text-white">{emptyRun.id}</TableCell>
+                    <TableCell className="text-white">{emptyRun.vehicleId}</TableCell>
+                    <TableCell className="text-white">{emptyRun.driverId}</TableCell>
+                    <TableCell className="text-white">{emptyRun.companyId}</TableCell>
+                    <TableCell className="text-white">{emptyRun.startLocation}</TableCell>
+                    <TableCell className="text-white">{emptyRun.endLocation}</TableCell>
+                    <TableCell className="text-white">{emptyRun.startTime?.replace('T', ' ')}</TableCell>
+                    <TableCell className="text-white">{emptyRun.endTime?.replace('T', ' ')}</TableCell>
+                    <TableCell className="text-white">{emptyRun.capacity}</TableCell>
+                    <TableCell className="text-white">{emptyRun.status}</TableCell>
+                    <TableCell>
+                      <Button 
+                        size="sm" 
+                        className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold mr-2" 
+                        onClick={() => handleEmptyRunEdit(emptyRun)}
+                      >
+                        {t('emptyRun.edit')}
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold" 
+                        onClick={() => handleEmptyRunDelete(emptyRun.id)}
+                      >
+                        {t('emptyRun.delete')}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="border-gray-400 text-gray-200" onClick={() => setEmptyRunDialogOpen(false)}>
+              {t('emptyRun.cancel')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

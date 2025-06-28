@@ -21,11 +21,91 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Logo from '@/components/ui/Logo';
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell
+} from '@/components/ui/table';
 
 
 const ShipperDashboard = () => {
   const { t } = useLanguage();
   const [showLoadForm, setShowLoadForm] = useState(false);
+
+  // 물류 요청 팝업 상태 및 핸들러
+  const [logisticsRequestDialogOpen, setLogisticsRequestDialogOpen] = useState(false);
+  const [logisticsRequests, setLogisticsRequests] = useState([
+    { id: 4001, shipperId: 1001, cargoType: '전자제품', startLocation: '서울', endLocation: '부산', startTime: '2024-01-15 10:00', endTime: '2024-01-15 20:00', weight: 5000, priority: '긴급', status: '대기중' },
+    { id: 4002, shipperId: 1002, cargoType: '자동차부품', startLocation: '대구', endLocation: '인천', startTime: '2024-01-16 09:00', endTime: '2024-01-16 18:00', weight: 3000, priority: '일반', status: '진행중' },
+    { id: 4003, shipperId: 1003, cargoType: '식품', startLocation: '광주', endLocation: '대전', startTime: '2024-01-17 08:00', endTime: '2024-01-17 17:00', weight: 2000, priority: '특급', status: '완료' }
+  ]);
+  const [logisticsRequestForm, setLogisticsRequestForm] = useState({ 
+    id: '', shipperId: '', cargoType: '', startLocation: '', endLocation: '', 
+    startTime: '', endTime: '', weight: '', priority: '', status: '' 
+  });
+  const [editLogisticsRequestId, setEditLogisticsRequestId] = useState(null);
+
+  const handleLogisticsRequestChange = e => {
+    const { name, value } = e.target;
+    if (name === 'id' || name === 'shipperId' || name === 'weight') {
+      const onlyNums = value.replace(/[^0-9]/g, '');
+      setLogisticsRequestForm(prev => ({ ...prev, [name]: onlyNums }));
+    } else {
+      setLogisticsRequestForm(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleLogisticsRequestSubmit = e => {
+    e.preventDefault();
+    if (!logisticsRequestForm.id || !logisticsRequestForm.shipperId || !logisticsRequestForm.startLocation || !logisticsRequestForm.endLocation) return;
+    if (editLogisticsRequestId) {
+      setLogisticsRequests(logisticsRequests.map(lr => lr.id === editLogisticsRequestId ? { 
+        ...logisticsRequestForm, 
+        id: Number(logisticsRequestForm.id), 
+        shipperId: Number(logisticsRequestForm.shipperId), 
+        weight: Number(logisticsRequestForm.weight) 
+      } : lr));
+      setEditLogisticsRequestId(null);
+    } else {
+      if (logisticsRequests.some(lr => lr.id === Number(logisticsRequestForm.id))) return;
+      setLogisticsRequests([...logisticsRequests, { 
+        ...logisticsRequestForm, 
+        id: Number(logisticsRequestForm.id), 
+        shipperId: Number(logisticsRequestForm.shipperId), 
+        weight: Number(logisticsRequestForm.weight) 
+      }]);
+    }
+    setLogisticsRequestForm({ id: '', shipperId: '', cargoType: '', startLocation: '', endLocation: '', startTime: '', endTime: '', weight: '', priority: '', status: '' });
+  };
+
+  const handleLogisticsRequestEdit = logisticsRequest => {
+    setLogisticsRequestForm({ 
+      ...logisticsRequest, 
+      id: String(logisticsRequest.id), 
+      shipperId: String(logisticsRequest.shipperId), 
+      weight: String(logisticsRequest.weight) 
+    });
+    setEditLogisticsRequestId(logisticsRequest.id);
+  };
+
+  const handleLogisticsRequestDelete = id => {
+    setLogisticsRequests(logisticsRequests.filter(lr => lr.id !== id));
+    if (editLogisticsRequestId === id) {
+      setLogisticsRequestForm({ id: '', shipperId: '', cargoType: '', startLocation: '', endLocation: '', startTime: '', endTime: '', weight: '', priority: '', status: '' });
+      setEditLogisticsRequestId(null);
+    }
+  };
 
   const activeShipments = [
     {
@@ -449,6 +529,14 @@ const ShipperDashboard = () => {
                   <Button 
                     variant="outline" 
                     className="w-full justify-start"
+                    onClick={() => setLogisticsRequestDialogOpen(true)}
+                  >
+                    <Package className="w-4 h-4 mr-2" />
+                    {t('logisticsRequest.title')}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
                     onClick={() => setShowLoadForm(true)}
                   >
                     <Plus className="w-4 h-4 mr-2" />
@@ -488,6 +576,245 @@ const ShipperDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* 물류 요청 팝업 */}
+      <Dialog open={logisticsRequestDialogOpen} onOpenChange={setLogisticsRequestDialogOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">{t('logisticsRequest.title')}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* 등록 폼 */}
+            <Card className="bg-gray-50">
+              <CardHeader>
+                <CardTitle className="text-lg">{editLogisticsRequestId ? t('logisticsRequest.edit') : t('logisticsRequest.register')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleLogisticsRequestSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="logistics-request-id">{t('logisticsRequest.id')}</Label>
+                      <Input
+                        id="logistics-request-id"
+                        name="id"
+                        value={logisticsRequestForm.id}
+                        onChange={handleLogisticsRequestChange}
+                        placeholder="예: 4001"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="logistics-request-shipper-id">{t('logisticsRequest.shipperId')}</Label>
+                      <Input
+                        id="logistics-request-shipper-id"
+                        name="shipperId"
+                        value={logisticsRequestForm.shipperId}
+                        onChange={handleLogisticsRequestChange}
+                        placeholder="예: 1001"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="logistics-request-cargo-type">{t('logisticsRequest.cargoType')}</Label>
+                      <Input
+                        id="logistics-request-cargo-type"
+                        name="cargoType"
+                        value={logisticsRequestForm.cargoType}
+                        onChange={handleLogisticsRequestChange}
+                        placeholder="예: 전자제품"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="logistics-request-weight">{t('logisticsRequest.weight')}</Label>
+                      <Input
+                        id="logistics-request-weight"
+                        name="weight"
+                        value={logisticsRequestForm.weight}
+                        onChange={handleLogisticsRequestChange}
+                        placeholder="예: 5000"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="logistics-request-start-location">{t('logisticsRequest.startLocation')}</Label>
+                      <Input
+                        id="logistics-request-start-location"
+                        name="startLocation"
+                        value={logisticsRequestForm.startLocation}
+                        onChange={handleLogisticsRequestChange}
+                        placeholder="예: 서울"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="logistics-request-end-location">{t('logisticsRequest.endLocation')}</Label>
+                      <Input
+                        id="logistics-request-end-location"
+                        name="endLocation"
+                        value={logisticsRequestForm.endLocation}
+                        onChange={handleLogisticsRequestChange}
+                        placeholder="예: 부산"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="logistics-request-start-time">{t('logisticsRequest.startTime')}</Label>
+                      <Input
+                        id="logistics-request-start-time"
+                        name="startTime"
+                        value={logisticsRequestForm.startTime}
+                        onChange={handleLogisticsRequestChange}
+                        placeholder="예: 2024-01-15 10:00"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="logistics-request-end-time">{t('logisticsRequest.endTime')}</Label>
+                      <Input
+                        id="logistics-request-end-time"
+                        name="endTime"
+                        value={logisticsRequestForm.endTime}
+                        onChange={handleLogisticsRequestChange}
+                        placeholder="예: 2024-01-15 20:00"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="logistics-request-priority">{t('logisticsRequest.priority')}</Label>
+                      <Select 
+                        value={logisticsRequestForm.priority} 
+                        onValueChange={(value) => setLogisticsRequestForm(prev => ({ ...prev, priority: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="우선순위 선택" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="일반">일반</SelectItem>
+                          <SelectItem value="긴급">긴급</SelectItem>
+                          <SelectItem value="특급">특급</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="logistics-request-status">{t('logisticsRequest.status')}</Label>
+                      <Select 
+                        value={logisticsRequestForm.status} 
+                        onValueChange={(value) => setLogisticsRequestForm(prev => ({ ...prev, status: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="상태 선택" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="대기중">대기중</SelectItem>
+                          <SelectItem value="진행중">진행중</SelectItem>
+                          <SelectItem value="완료">완료</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button type="submit" className="logistics-button-primary">
+                      {editLogisticsRequestId ? t('logisticsRequest.save') : t('logisticsRequest.register')}
+                    </Button>
+                    {editLogisticsRequestId && (
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={() => {
+                          setLogisticsRequestForm({ id: '', shipperId: '', cargoType: '', startLocation: '', endLocation: '', startTime: '', endTime: '', weight: '', priority: '', status: '' });
+                          setEditLogisticsRequestId(null);
+                        }}
+                      >
+                        {t('logisticsRequest.cancel')}
+                      </Button>
+                    )}
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+            
+            {/* 목록 테이블 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">물류 요청 목록</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('logisticsRequest.id')}</TableHead>
+                      <TableHead>{t('logisticsRequest.shipperId')}</TableHead>
+                      <TableHead>{t('logisticsRequest.cargoType')}</TableHead>
+                      <TableHead>{t('logisticsRequest.startLocation')}</TableHead>
+                      <TableHead>{t('logisticsRequest.endLocation')}</TableHead>
+                      <TableHead>{t('logisticsRequest.startTime')}</TableHead>
+                      <TableHead>{t('logisticsRequest.endTime')}</TableHead>
+                      <TableHead>{t('logisticsRequest.weight')}</TableHead>
+                      <TableHead>{t('logisticsRequest.priority')}</TableHead>
+                      <TableHead>{t('logisticsRequest.status')}</TableHead>
+                      <TableHead>{t('logisticsRequest.action')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {logisticsRequests.map((logisticsRequest) => (
+                      <TableRow key={logisticsRequest.id}>
+                        <TableCell>{logisticsRequest.id}</TableCell>
+                        <TableCell>{logisticsRequest.shipperId}</TableCell>
+                        <TableCell>{logisticsRequest.cargoType}</TableCell>
+                        <TableCell>{logisticsRequest.startLocation}</TableCell>
+                        <TableCell>{logisticsRequest.endLocation}</TableCell>
+                        <TableCell>{logisticsRequest.startTime}</TableCell>
+                        <TableCell>{logisticsRequest.endTime}</TableCell>
+                        <TableCell>{logisticsRequest.weight}</TableCell>
+                        <TableCell>{logisticsRequest.priority}</TableCell>
+                        <TableCell>{logisticsRequest.status}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleLogisticsRequestEdit(logisticsRequest)}
+                            >
+                              {t('logisticsRequest.edit')}
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleLogisticsRequestDelete(logisticsRequest.id)}
+                            >
+                              {t('logisticsRequest.delete')}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setLogisticsRequestDialogOpen(false)}
+            >
+              {t('logisticsRequest.cancel')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
