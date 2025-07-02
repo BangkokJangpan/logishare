@@ -56,7 +56,8 @@ const DriverDashboard = () => {
     estimatedEarning: "$1,250",
     status: "in-transit",
     progress: 65,
-    eta: "4h 32m"
+    eta: "4h 32m",
+    startDate: getToday(),
   });
 
   const availableLoads = [
@@ -108,24 +109,53 @@ const DriverDashboard = () => {
     { id: 3, name: '박기사' },
   ]);
 
-  const [vehicles, setVehicles] = useState([]);
+  const [vehicles, setVehicles] = useState([
+    { id: 2001, number: '12가3456' },
+    { id: 2002, number: '34나5678' },
+    { id: 2003, number: '56다7890' },
+    { id: 2004, number: '78라1234' },
+    { id: 2005, number: '90마5678' },
+  ]);
+
+  const [companies, setCompanies] = useState([
+    { id: 1001, name: '로지쉐어' },
+    { id: 1002, name: '스마트물류' },
+    { id: 1003, name: '에코트랜스' },
+    { id: 1004, name: '글로벌로지' },
+    { id: 1005, name: '이지카고' },
+  ]);
+
+  const [drivers, setDrivers] = useState([
+    { id: 1, name: '김철수' },
+    { id: 2, name: '이영희' },
+    { id: 3, name: '박기사' },
+    { id: 4, name: '최운전' },
+    { id: 5, name: '정기사' },
+  ]);
 
   // 공차 운행 등록 팝업 상태 및 핸들러
   const [emptyRunDialogOpen, setEmptyRunDialogOpen] = useState(false);
+  const [loadDetailDialogOpen, setLoadDetailDialogOpen] = useState(false);
+  const [selectedLoad, setSelectedLoad] = useState(null);
   const [emptyRuns, setEmptyRuns] = useState([
-    { id: 3001, vehicleId: 2001, driverId: 1001, companyId: 1001, startLocation: '서울', endLocation: '부산', startTime: '2024-01-15 09:00', endTime: '2024-01-15 18:00', capacity: 3000, status: '예정' },
-    { id: 3002, vehicleId: 2002, driverId: 1002, companyId: 1002, startLocation: '대구', endLocation: '인천', startTime: '2024-01-16 10:00', endTime: '2024-01-16 19:00', capacity: 2500, status: '진행중' },
-    { id: 3003, vehicleId: 2003, driverId: 1003, companyId: 1003, startLocation: '광주', endLocation: '대전', startTime: '2024-01-17 08:00', endTime: '2024-01-17 17:00', capacity: 4000, status: '완료' }
+    { id: 3001, vehicleId: 2001, driverId: 1, companyId: 1001, startLocation: '서울', endLocation: '부산', startDate: '2024-01-15', startTime: '09:00', estimatedArrivalTime: '18:00', capacity: 3000, status: '예정', cargo: '전자제품', estimatedEarning: '$1,250', progress: 65, eta: '4h 32m', distance: '387 miles' },
+    { id: 3002, vehicleId: 2002, driverId: 2, companyId: 1002, startLocation: '대구', endLocation: '인천', startDate: '2024-01-16', startTime: '10:00', estimatedArrivalTime: '19:00', capacity: 2500, status: '진행중', cargo: '자동차부품', estimatedEarning: '$1,800', progress: 15, eta: '18h 45m', distance: '890 miles' },
+    { id: 3003, vehicleId: 2003, driverId: 3, companyId: 1003, startLocation: '광주', endLocation: '대전', startDate: '2024-01-17', startTime: '08:00', estimatedArrivalTime: '17:00', capacity: 4000, status: '완료', cargo: '식품', estimatedEarning: '$1,400', progress: 100, eta: '도착', distance: '520 miles' }
   ]);
   const [emptyRunForm, setEmptyRunForm] = useState({ 
-    id: '', vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', 
-    startTime: '', endTime: '', capacity: '', status: '' 
+    vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', 
+    startDate: '', startTime: '', estimatedArrivalTime: '', capacity: '', status: '',
+    cargo: '', estimatedEarning: '', progress: '', eta: '', distance: ''
   });
   const [editEmptyRunId, setEditEmptyRunId] = useState(null);
 
+  const [selectedStatus, setSelectedStatus] = useState('예정');
+  const [selectedDate, setSelectedDate] = useState(getToday());
+  const matchedEmptyRuns = emptyRuns.filter(er => er.status === selectedStatus && er.startDate === selectedDate);
+
   const handleEmptyRunChange = e => {
     const { name, value } = e.target;
-    if (name === 'id' || name === 'vehicleId' || name === 'driverId' || name === 'companyId' || name === 'capacity') {
+    if (name === 'vehicleId' || name === 'driverId' || name === 'companyId' || name === 'capacity' || name === 'progress') {
       const onlyNums = value.replace(/[^0-9]/g, '');
       setEmptyRunForm(prev => ({ ...prev, [name]: onlyNums }));
     } else {
@@ -135,47 +165,91 @@ const DriverDashboard = () => {
 
   const handleEmptyRunSubmit = e => {
     e.preventDefault();
-    if (!emptyRunForm.id || !emptyRunForm.vehicleId || !emptyRunForm.startLocation || !emptyRunForm.endLocation) return;
-    if (editEmptyRunId) {
-      setEmptyRuns(emptyRuns.map(er => er.id === editEmptyRunId ? { 
-        ...emptyRunForm, 
-        id: Number(emptyRunForm.id), 
-        vehicleId: Number(emptyRunForm.vehicleId), 
-        driverId: Number(emptyRunForm.driverId), 
-        companyId: Number(emptyRunForm.companyId), 
-        capacity: Number(emptyRunForm.capacity) 
-      } : er));
+    if (!emptyRunForm.vehicleId || !emptyRunForm.startLocation || !emptyRunForm.endLocation) return;
+    let newStatus = emptyRunForm.status;
+    let newDate = emptyRunForm.startDate;
+    const driverIdNum = emptyRunForm.driverId ? Number(emptyRunForm.driverId) : undefined;
+    const companyIdNum = emptyRunForm.companyId ? Number(emptyRunForm.companyId) : undefined;
+    if (editEmptyRunId !== null && editEmptyRunId !== undefined) {
+      setEmptyRuns(emptyRuns.map(er =>
+        Number(er.id) === Number(editEmptyRunId)
+          ? {
+              ...er,
+              ...emptyRunForm,
+              id: Number(editEmptyRunId),
+              vehicleId: Number(emptyRunForm.vehicleId),
+              driverId: driverIdNum,
+              companyId: companyIdNum,
+              capacity: Number(emptyRunForm.capacity),
+              progress: Number(emptyRunForm.progress),
+            }
+          : er
+      ));
       setEditEmptyRunId(null);
     } else {
-      if (emptyRuns.some(er => er.id === Number(emptyRunForm.id))) return;
-      setEmptyRuns([...emptyRuns, { 
-        ...emptyRunForm, 
-        id: Number(emptyRunForm.id), 
-        vehicleId: Number(emptyRunForm.vehicleId), 
-        driverId: Number(emptyRunForm.driverId), 
-        companyId: Number(emptyRunForm.companyId), 
-        capacity: Number(emptyRunForm.capacity) 
-      }]);
+      const nextId =
+        emptyRuns.length > 0
+          ? Math.max(...emptyRuns.map(er => Number(er.id))) + 1
+          : 1;
+      setEmptyRuns([
+        ...emptyRuns,
+        {
+          ...emptyRunForm,
+          id: Number(nextId),
+          vehicleId: Number(emptyRunForm.vehicleId),
+          driverId: driverIdNum,
+          companyId: companyIdNum,
+          capacity: Number(emptyRunForm.capacity),
+          progress: Number(emptyRunForm.progress),
+        },
+      ]);
     }
-    setEmptyRunForm({ id: '', vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', startTime: '', endTime: '', capacity: '', status: '' });
+    setSelectedStatus(newStatus);
+    setSelectedDate(newDate);
+    setEmptyRunForm({
+      vehicleId: '',
+      driverId: '',
+      companyId: '',
+      startLocation: '',
+      endLocation: '',
+      startDate: '',
+      startTime: '',
+      estimatedArrivalTime: '',
+      capacity: '',
+      status: '',
+      cargo: '',
+      estimatedEarning: '',
+      progress: '',
+      eta: '',
+      distance: '',
+    });
   };
 
   const handleEmptyRunEdit = emptyRun => {
-    setEmptyRunForm({ 
-      ...emptyRun, 
-      id: String(emptyRun.id), 
-      vehicleId: String(emptyRun.vehicleId), 
-      driverId: String(emptyRun.driverId), 
-      companyId: String(emptyRun.companyId), 
-      capacity: String(emptyRun.capacity) 
+    setEmptyRunForm({
+      vehicleId: emptyRun.vehicleId ? String(emptyRun.vehicleId) : '',
+      driverId: emptyRun.driverId ? String(emptyRun.driverId) : '',
+      companyId: emptyRun.companyId ? String(emptyRun.companyId) : '',
+      capacity: emptyRun.capacity !== undefined && emptyRun.capacity !== null ? String(emptyRun.capacity) : '',
+      progress: emptyRun.progress !== undefined && emptyRun.progress !== null ? String(emptyRun.progress) : '',
+      cargo: emptyRun.cargo || '',
+      estimatedEarning: emptyRun.estimatedEarning || '',
+      eta: emptyRun.eta || '',
+      distance: emptyRun.distance || '',
+      startLocation: emptyRun.startLocation || '',
+      endLocation: emptyRun.endLocation || '',
+      startDate: emptyRun.startDate || '',
+      startTime: emptyRun.startTime || '',
+      estimatedArrivalTime: emptyRun.estimatedArrivalTime || '',
+      status: emptyRun.status || '',
     });
-    setEditEmptyRunId(emptyRun.id);
+    setEditEmptyRunId(String(emptyRun.id));
   };
 
   const handleEmptyRunDelete = id => {
     setEmptyRuns(emptyRuns.filter(er => er.id !== id));
     if (editEmptyRunId === id) {
-      setEmptyRunForm({ id: '', vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', startTime: '', endTime: '', capacity: '', status: '' });
+      setEmptyRunForm({ vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', startDate: '', startTime: '', estimatedArrivalTime: '', capacity: '', status: '', cargo: '', estimatedEarning: '', progress: '', eta: '', distance: '' });
       setEditEmptyRunId(null);
     }
   };
@@ -197,6 +271,9 @@ const DriverDashboard = () => {
     ]);
   }, []);
 
+  // 가장 최근 공차 운행 데이터
+  const latestEmptyRun = emptyRuns.length > 0 ? emptyRuns[emptyRuns.length - 1] : null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 p-6 text-foreground">
       <div className="max-w-7xl mx-auto">
@@ -204,9 +281,13 @@ const DriverDashboard = () => {
         <div className="mb-8 relative">
           <div className="flex items-center justify-between">
             {/* 좌측: 홈버튼 */}
-            <div className="flex items-center gap-4 min-w-[180px]">
+            <a
+              href="/"
+              className="block w-full min-h-[56px] flex items-center gap-2 px-4 cursor-pointer no-underline"
+              style={{height: '100%'}}
+            >
               <Logo />
-            </div>
+            </a>
             {/* 중앙: 제목/부제목 */}
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center w-full pointer-events-none">
               <h1 className="text-3xl font-bold text-white pointer-events-auto">{t('driver.dashboard.title')}</h1>
@@ -258,70 +339,92 @@ const DriverDashboard = () => {
                       <Truck className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <CardTitle className="text-xl text-white">{t('driver.currentTrip')}</CardTitle>
-                      <CardDescription className="text-gray-300">{t('driver.tripId')}: {activeTrip.id}</CardDescription>
+                      <CardTitle className="text-xl text-white">{t('driver.emptyRun')}</CardTitle>
+                      <CardDescription className="text-gray-300">운행 ID: {matchedEmptyRuns.length === 0 ? '-' : matchedEmptyRuns[0].id}</CardDescription>
                     </div>
                   </div>
-                  <Badge className="status-active">{t('driver.inTransit')}</Badge>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      className="px-2 py-1 rounded border border-gray-600 bg-gray-900 text-white focus:ring-2 focus:ring-blue-400"
+                      value={selectedDate}
+                      onChange={e => setSelectedDate(e.target.value)}
+                      style={{ minWidth: 120 }}
+                    />
+                    <Button
+                      size="sm"
+                      className={selectedStatus === '예정' ? 'bg-blue-600 text-white font-bold border border-blue-400' : selectedStatus === '진행중' ? 'bg-yellow-500 text-black font-bold border border-yellow-400' : 'bg-green-600 text-white font-bold border border-green-400'}
+                      style={{ minWidth: 70 }}
+                      onClick={() => {
+                        const nextStatus = selectedStatus === '예정' ? '진행중' : selectedStatus === '진행중' ? '완료' : '예정';
+                        setSelectedStatus(nextStatus);
+                      }}
+                    >
+                      {selectedStatus}
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Package className="w-5 h-5 text-complementary" />
-                      <span className="text-white font-medium">{activeTrip.cargo}</span>
-                    </div>
-                    <span className="text-logistics-primary font-semibold">{activeTrip.estimatedEarning}</span>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-green-400" />
-                      <div>
-                        <p className="text-sm text-gray-300">{t('driver.pickup')}</p>
-                        <p className="font-medium text-white">{activeTrip.pickup}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-red-400" />
-                      <div>
-                        <p className="text-sm text-gray-300">{t('driver.delivery')}</p>
-                        <p className="font-medium text-white">{activeTrip.delivery}</p>
-                      </div>
+                {matchedEmptyRuns.length === 0 ? (
+                  <div className="grid gap-6 mb-6">
+                    <div className="bg-gray-800 border-gray-700 rounded-xl shadow-lg p-6 min-h-[200px] flex flex-col justify-center items-center">
+                      <span className="text-gray-400 text-lg font-semibold">해당 날짜/상태의 공차 운행 데이터가 없습니다.</span>
                     </div>
                   </div>
-                  
-                  <div className="bg-gray-900 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-gray-300">{t('driver.progress')}</span>
-                      <span className="text-sm font-medium text-white">{activeTrip.progress}%</span>
-                    </div>
-                    <div className="w-full bg-gray-700 rounded-full h-2">
-                      <div 
-                        className="bg-logistics-primary h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${activeTrip.progress}%` }}
-                      ></div>
-                    </div>
-                    <div className="flex items-center justify-between mt-3 text-sm">
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-4 h-4 text-complementary" />
-                        <span className="text-white">{t('driver.eta')}: {activeTrip.eta}</span>
-                      </div>
-                      <span className="text-gray-300">{activeTrip.distance}</span>
-                    </div>
+                ) : (
+                  <div className={`grid gap-6 mb-6 grid-cols-1`} style={{ minHeight: `${Math.max(matchedEmptyRuns.length * 200, 200)}px` }}>
+                    {matchedEmptyRuns
+                      .slice()
+                      .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''))
+                      .map((run) => (
+                        <div key={run.id} className="bg-gray-800 border-gray-700 rounded-xl shadow-lg p-6">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <Package className="w-5 h-5 text-complementary" />
+                              <span className="text-white font-medium">{run.vehicleId}</span>
+                            </div>
+                            <span className="text-gray-300 font-semibold">출발예정 : <span className="text-white font-semibold">{run.startTime || '-'}</span></span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 mt-2">
+                            <div className="flex items-center gap-2">
+                              <MapPin className="w-4 h-4 text-green-400" />
+                              <div>
+                                <p className="text-sm text-gray-300">{t('driver.pickup')}</p>
+                                <p className="font-medium text-white">{run.startLocation || '-'}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <MapPin className="w-4 h-4 text-red-400" />
+                              <div>
+                                <p className="text-sm text-gray-300">{t('driver.delivery')}</p>
+                                <p className="font-medium text-white">{run.endLocation || '-'}</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="bg-gray-900 rounded-lg p-4 mt-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm text-gray-300">{t('driver.progress')}</span>
+                              <span className="text-sm font-medium text-white">{run.progress !== undefined ? run.progress + '%' : '-'}</span>
+                            </div>
+                            <div className="w-full bg-gray-700 rounded-full h-2">
+                              <div 
+                                className="bg-logistics-primary h-2 rounded-full transition-all duration-300"
+                                style={{ width: run.progress !== undefined ? `${run.progress}%` : '0%' }}
+                              ></div>
+                            </div>
+                            <div className="flex items-center justify-between mt-3 text-sm">
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-4 h-4 text-complementary" />
+                                <span className="text-white">{t('driver.eta')}: {run.eta || '-'}</span>
+                              </div>
+                              <span className="text-gray-300">{run.distance || '-'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                   </div>
-                  
-                  <div className="flex gap-3">
-                    <Button className="logistics-button-primary flex-1">
-                      <Navigation className="w-4 h-4 mr-2 text-complementary" />
-                      {t('driver.navigate')}
-                    </Button>
-                    <Button variant="outline" className="flex-1">
-                      {t('driver.updateStatus')}
-                    </Button>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 
@@ -375,7 +478,17 @@ const DriverDashboard = () => {
                       
                       <div className="flex gap-2">
                         <Button className="logistics-button-primary flex-1">{t('driver.acceptLoad')}</Button>
-                        <Button variant="outline" size="sm" className="text-white border-gray-600">{t('driver.details')}</Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-white border-gray-600"
+                          onClick={() => {
+                            setSelectedLoad(load);
+                            setLoadDetailDialogOpen(true);
+                          }}
+                        >
+                          {t('driver.details')}
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -482,117 +595,63 @@ const DriverDashboard = () => {
 
       {/* 공차 운행 등록 팝업 */}
       <Dialog open={emptyRunDialogOpen} onOpenChange={setEmptyRunDialogOpen}>
-        <DialogContent className="max-w-6xl w-full bg-[#102040] text-white">
+        <DialogContent className="max-w-7xl w-full bg-[#0f1a2e] text-white">
           <DialogHeader>
-            <DialogTitle className="text-white">{t('emptyRun.title')}</DialogTitle>
+            <DialogTitle className="text-white text-2xl font-bold">{t('emptyRun.title')}</DialogTitle>
+            <p className="text-gray-300 text-base leading-relaxed">{t('emptyRun.description')}</p>
           </DialogHeader>
           <div className="space-y-4 mt-4 overflow-x-auto">
-            <form className="flex flex-wrap gap-2 min-w-[1200px]" onSubmit={handleEmptyRunSubmit}>
-              <input
-                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder={t('emptyRun.vehicle')}
-                name="vehicleId"
-                value={emptyRunForm.vehicleId}
-                onChange={handleEmptyRunChange}
-                required
-              />
-              <input
-                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder={t('emptyRun.driver')}
-                name="driverId"
-                value={emptyRunForm.driverId}
-                onChange={handleEmptyRunChange}
-                required
-              />
-              <input
-                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder="회사ID"
-                name="companyId"
-                value={emptyRunForm.companyId}
-                onChange={handleEmptyRunChange}
-                required
-              />
-              <input
-                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder={t('emptyRun.startLocation')}
-                name="startLocation"
-                value={emptyRunForm.startLocation}
-                onChange={handleEmptyRunChange}
-                required
-              />
-              <input
-                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder={t('emptyRun.endLocation')}
-                name="endLocation"
-                value={emptyRunForm.endLocation}
-                onChange={handleEmptyRunChange}
-                required
-              />
-              <input
-                type="datetime-local"
-                className="flex-1 min-w-[180px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
-                name="startTime"
-                value={emptyRunForm.startTime}
-                onChange={handleEmptyRunChange}
-                required
-              />
-              <input
-                type="datetime-local"
-                className="flex-1 min-w-[180px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
-                name="endTime"
-                value={emptyRunForm.endTime}
-                onChange={handleEmptyRunChange}
-                required
-              />
-              <input
-                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder={t('emptyRun.capacity')}
-                name="capacity"
-                value={emptyRunForm.capacity}
-                onChange={handleEmptyRunChange}
-                required
-              />
-              <select
-                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
-                name="status"
-                value={emptyRunForm.status}
-                onChange={handleEmptyRunChange}
-                required
-              >
-                <option value="">{t('emptyRun.status')}</option>
-                <option value="예정">예정</option>
-                <option value="진행중">진행중</option>
-                <option value="완료">완료</option>
-                <option value="취소">취소</option>
-              </select>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
-                {editEmptyRunId ? t('emptyRun.save') : t('emptyRun.register')}
-              </Button>
-              {editEmptyRunId && (
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  className="border-gray-400 text-gray-200" 
-                  onClick={() => { 
-                    setEmptyRunForm({ id: '', vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', startTime: '', endTime: '', capacity: '', status: '' }); 
-                    setEditEmptyRunId(null); 
-                  }}
-                >
-                  {t('emptyRun.cancel')}
+            <form className="flex flex-col gap-3 min-w-[1200px]" onSubmit={handleEmptyRunSubmit}>
+              <div className="flex gap-2">
+                <select className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400" name="companyId" value={emptyRunForm.companyId} onChange={handleEmptyRunChange} required>
+                  <option value="">회사 선택</option>
+                  {companies.map((company) => (<option key={company.company_id} value={company.company_id}>{company.company_name}</option>))}
+                </select>
+                <select className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400" name="vehicleId" value={emptyRunForm.vehicleId} onChange={handleEmptyRunChange} required>
+                  <option value="">차량 선택</option>
+                  {vehicles.map((vehicle) => (<option key={vehicle.id} value={String(vehicle.id)}>{vehicle.number}</option>))}
+                </select>
+                <select className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400" name="driverId" value={emptyRunForm.driverId} onChange={handleEmptyRunChange} required>
+                  <option value="">운전자 선택</option>
+                  {drivers.map((driver) => (<option key={driver.id} value={driver.id}>{driver.name}</option>))}
+                </select>
+                <input className="flex-1 min-w-[100px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400" placeholder={t('emptyRun.capacity')} name="capacity" value={String(emptyRunForm.capacity)} onChange={handleEmptyRunChange} required />
+              </div>
+              <div className="flex gap-2">
+                <input className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400" placeholder={t('emptyRun.startLocation')} name="startLocation" value={emptyRunForm.startLocation} onChange={handleEmptyRunChange} required />
+                <input className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400" placeholder={t('emptyRun.endLocation')} name="endLocation" value={emptyRunForm.endLocation} onChange={handleEmptyRunChange} required />
+                <input type="date" className="flex-1 min-w-[140px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400" name="startDate" value={emptyRunForm.startDate} onChange={handleEmptyRunChange} required />
+                <input type="time" className="flex-1 min-w-[100px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400" name="startTime" value={emptyRunForm.startTime} onChange={handleEmptyRunChange} required />
+                <input type="time" className="flex-1 min-w-[100px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400" name="estimatedArrivalTime" value={emptyRunForm.estimatedArrivalTime} onChange={handleEmptyRunChange} required />
+                <select className="flex-1 min-w-[100px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400" name="status" value={emptyRunForm.status} onChange={handleEmptyRunChange} required>
+                  <option value="">{t('emptyRun.status')}</option>
+                  <option value="예정">예정</option>
+                  <option value="진행중">진행중</option>
+                  <option value="완료">완료</option>
+                  <option value="취소">취소</option>
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                  {editEmptyRunId ? t('emptyRun.save') : t('emptyRun.register')}
                 </Button>
-              )}
+                {editEmptyRunId && (
+                  <Button type="button" variant="outline" className="border-gray-400 text-gray-200" onClick={() => { setEmptyRunForm({ vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', startDate: '', startTime: '', estimatedArrivalTime: '', capacity: '', status: '', cargo: '', estimatedEarning: '', progress: '', eta: '', distance: '' }); setEditEmptyRunId(null); }}>{t('emptyRun.cancel')}</Button>
+                )}
+              </div>
             </form>
             <Table className="min-w-[1200px] w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-white">ID</TableHead>
-                  <TableHead className="text-white">{t('emptyRun.vehicle')}</TableHead>
-                  <TableHead className="text-white">{t('emptyRun.driver')}</TableHead>
-                  <TableHead className="text-white">회사ID</TableHead>
+                  <TableHead className="text-white">{t('emptyRun.id')}</TableHead>
+                  <TableHead className="text-white">회사명</TableHead>
+                  <TableHead className="text-white">차량번호</TableHead>
+                  <TableHead className="text-white">운전자명</TableHead>
                   <TableHead className="text-white">{t('emptyRun.startLocation')}</TableHead>
                   <TableHead className="text-white">{t('emptyRun.endLocation')}</TableHead>
-                  <TableHead className="text-white">{t('emptyRun.startTime')}</TableHead>
-                  <TableHead className="text-white">{t('emptyRun.endTime')}</TableHead>
+                  <TableHead className="text-white">출발일자</TableHead>
+                  <TableHead className="text-white">출발시각</TableHead>
+                  <TableHead className="text-white">도착예정시각</TableHead>
                   <TableHead className="text-white">{t('emptyRun.capacity')}</TableHead>
                   <TableHead className="text-white">{t('emptyRun.status')}</TableHead>
                   <TableHead className="text-white">{t('emptyRun.action')}</TableHead>
@@ -602,30 +661,19 @@ const DriverDashboard = () => {
                 {emptyRuns.map((emptyRun) => (
                   <TableRow key={emptyRun.id} className="bg-[#1a2a40] border-blue-900">
                     <TableCell className="text-white">{emptyRun.id}</TableCell>
+                    <TableCell className="text-white">{companies.find(c => c.company_id === Number(emptyRun.companyId))?.company_name || '-'}</TableCell>
                     <TableCell className="text-white">{emptyRun.vehicleId}</TableCell>
-                    <TableCell className="text-white">{emptyRun.driverId}</TableCell>
-                    <TableCell className="text-white">{emptyRun.companyId}</TableCell>
+                    <TableCell className="text-white">{drivers.find(d => d.id === Number(emptyRun.driverId))?.name || '-'}</TableCell>
                     <TableCell className="text-white">{emptyRun.startLocation}</TableCell>
                     <TableCell className="text-white">{emptyRun.endLocation}</TableCell>
+                    <TableCell className="text-white">{emptyRun.startDate}</TableCell>
                     <TableCell className="text-white">{emptyRun.startTime?.replace('T', ' ')}</TableCell>
-                    <TableCell className="text-white">{emptyRun.endTime?.replace('T', ' ')}</TableCell>
+                    <TableCell className="text-white">{emptyRun.estimatedArrivalTime?.replace('T', ' ')}</TableCell>
                     <TableCell className="text-white">{emptyRun.capacity}</TableCell>
                     <TableCell className="text-white">{emptyRun.status}</TableCell>
                     <TableCell>
-                      <Button 
-                        size="sm" 
-                        className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold mr-2" 
-                        onClick={() => handleEmptyRunEdit(emptyRun)}
-                      >
-                        {t('emptyRun.edit')}
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        className="bg-red-600 hover:bg-red-700 text-white font-bold" 
-                        onClick={() => handleEmptyRunDelete(emptyRun.id)}
-                      >
-                        {t('emptyRun.delete')}
-                      </Button>
+                      <Button size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold mr-2" onClick={() => handleEmptyRunEdit(emptyRun)}>{t('emptyRun.edit')}</Button>
+                      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white font-bold" onClick={() => handleEmptyRunDelete(emptyRun.id)}>{t('emptyRun.delete')}</Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -633,8 +681,120 @@ const DriverDashboard = () => {
             </Table>
           </div>
           <DialogFooter>
-            <Button variant="outline" className="border-gray-400 text-gray-200" onClick={() => setEmptyRunDialogOpen(false)}>
-              {t('emptyRun.cancel')}
+            <Button variant="outline" className="border-gray-400 text-gray-200" onClick={() => setEmptyRunDialogOpen(false)}>{t('emptyRun.close')}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 화물 상세 정보 팝업 */}
+      <Dialog open={loadDetailDialogOpen} onOpenChange={setLoadDetailDialogOpen}>
+        <DialogContent className="max-w-4xl w-full bg-[#0f1a2e] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white text-2xl font-bold">화물 상세 정보</DialogTitle>
+            <p className="text-gray-300 text-base leading-relaxed">선택한 화물의 상세 정보를 확인하세요.</p>
+          </DialogHeader>
+          <div className="space-y-6 mt-4">
+            {selectedLoad ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="bg-gray-800 border-gray-700 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-white mb-3">기본 정보</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">화물 ID:</span>
+                        <span className="text-white font-medium">{selectedLoad.id || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">화물 종류:</span>
+                        <span className="text-white font-medium">{selectedLoad.cargo || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">수익:</span>
+                        <span className="text-logistics-primary font-semibold">{selectedLoad.earning || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">매칭 점수:</span>
+                        <span className="text-white font-medium">{selectedLoad.matchScore || '-'}%</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gray-800 border-gray-700 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-white mb-3">운송 정보</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">픽업지:</span>
+                        <span className="text-white font-medium">{selectedLoad.pickup || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">배송지:</span>
+                        <span className="text-white font-medium">{selectedLoad.delivery || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">거리:</span>
+                        <span className="text-white font-medium">{selectedLoad.distance || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">무게:</span>
+                        <span className="text-white font-medium">{selectedLoad.weight || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="bg-gray-800 border-gray-700 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-white mb-3">추가 정보</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">긴급 여부:</span>
+                        <span className={`font-medium ${selectedLoad.urgent ? 'text-red-400' : 'text-green-400'}`}>
+                          {selectedLoad.urgent ? '긴급' : '일반'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">상태:</span>
+                        <span className="text-white font-medium">대기중</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">등록일:</span>
+                        <span className="text-white font-medium">{getToday()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">예상 소요시간:</span>
+                        <span className="text-white font-medium">-</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gray-800 border-gray-700 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-white mb-3">요구사항</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">차량 요구사항:</span>
+                        <span className="text-white font-medium">-</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">운전자 요구사항:</span>
+                        <span className="text-white font-medium">-</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">특별 요구사항:</span>
+                        <span className="text-white font-medium">-</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-300">선택된 화물 정보가 없습니다.</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="border-gray-400 text-gray-200" onClick={() => setLoadDetailDialogOpen(false)}>
+              닫기
             </Button>
           </DialogFooter>
         </DialogContent>

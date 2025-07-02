@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,14 @@ import {
   TableCell
 } from '@/components/ui/table';
 import Logo from '@/components/ui/Logo';
+import {
+  fetchCompanies, createCompany, updateCompany, deleteCompany,
+  fetchVehicles, createVehicle, updateVehicle, deleteVehicle,
+  fetchDrivers, createDriver, updateDriver, deleteDriver,
+  fetchEmptyRuns, createEmptyRun, updateEmptyRun, deleteEmptyRun,
+  fetchShippers, createShipper, updateShipper, deleteShipper
+} from '../lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 const AdminPage = () => {
   const { t } = useLanguage();
@@ -108,62 +116,50 @@ const AdminPage = () => {
   };
 
   const [companyDialogOpen, setCompanyDialogOpen] = React.useState(false);
-  const [companies, setCompanies] = React.useState([
-    { id: 1001, name: '로지쉐어', ceo: '홍길동', contact: '010-1234-1001', manager: '이수진', managerContact: '010-9000-1001' },
-    { id: 1002, name: '스마트물류', ceo: '김철수', contact: '010-1234-1002', manager: '박지현', managerContact: '010-9000-1002' },
-    { id: 1003, name: '에코트랜스', ceo: '이영희', contact: '010-1234-1003', manager: '최민호', managerContact: '010-9000-1003' },
-    { id: 1004, name: '글로벌로지', ceo: '박민수', contact: '010-1234-1004', manager: '정유진', managerContact: '010-9000-1004' },
-    { id: 1005, name: '이지카고', ceo: '최지우', contact: '010-1234-1005', manager: '한지훈', managerContact: '010-9000-1005' }
-  ]);
-  const [companyForm, setCompanyForm] = React.useState({ id: '', name: '', ceo: '', contact: '', manager: '', managerContact: '' });
+  const [companies, setCompanies] = React.useState([]);
+  const [companyForm, setCompanyForm] = React.useState({
+    company_id: '',
+    company_name: '',
+    business_number: '',
+    phone: '',
+    email: '',
+    address: '',
+    company_type: '',
+    status: ''
+  });
   const [editCompanyId, setEditCompanyId] = React.useState(null);
 
   const handleCompanyChange = e => {
     const { name, value } = e.target;
-    if (name === 'id' || name === 'managerContact') {
-      // 숫자만 허용
-      const onlyNums = value.replace(/[^0-9]/g, '');
-      setCompanyForm(prev => ({ ...prev, [name]: onlyNums }));
-    } else {
-      setCompanyForm(prev => ({ ...prev, [name]: value }));
-    }
+    setCompanyForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleCompanySubmit = e => {
+  const handleCompanySubmit = async e => {
     e.preventDefault();
-    if (!companyForm.id || !companyForm.name) return;
+    if (!companyForm.company_name) return;
     if (editCompanyId) {
-      setCompanies(companies.map(c => c.id === editCompanyId ? { ...companyForm, id: Number(companyForm.id) } : c));
-      setEditCompanyId(null);
+      await updateCompany(editCompanyId, companyForm);
     } else {
-      if (companies.some(c => c.id === Number(companyForm.id))) return;
-      setCompanies([...companies, { ...companyForm, id: Number(companyForm.id) }]);
+      await createCompany(companyForm);
     }
-    setCompanyForm({ id: '', name: '', ceo: '', contact: '', manager: '', managerContact: '' });
+    fetchCompanies().then(res => setCompanies(res.data));
+    setCompanyForm({ company_id: '', company_name: '', business_number: '', phone: '', email: '', address: '', company_type: '', status: '' });
+    setEditCompanyId(null);
   };
 
   const handleCompanyEdit = company => {
-    setCompanyForm({ ...company, id: String(company.id) });
-    setEditCompanyId(company.id);
+    setCompanyForm(company);
+    setEditCompanyId(company.company_id);
   };
 
-  const handleCompanyDelete = id => {
-    setCompanies(companies.filter(c => c.id !== id));
-    if (editCompanyId === id) {
-      setCompanyForm({ id: '', name: '', ceo: '', contact: '', manager: '', managerContact: '' });
-      setEditCompanyId(null);
-    }
+  const handleCompanyDelete = async id => {
+    await deleteCompany(id);
+    fetchCompanies().then(res => setCompanies(res.data));
   };
 
   const [vehicleDialogOpen, setVehicleDialogOpen] = React.useState(false);
-  const [vehicles, setVehicles] = React.useState([
-    { id: 2001, number: '12가3456', type: '트럭', weight: 5000, companyId: 1001, driver: '이수진', driverContact: '010-9000-2001' },
-    { id: 2002, number: '34나5678', type: '탑차', weight: 3500, companyId: 1002, driver: '박지현', driverContact: '010-9000-2002' },
-    { id: 2003, number: '56다7890', type: '윙바디', weight: 4500, companyId: 1003, driver: '최민호', driverContact: '010-9000-2003' },
-    { id: 2004, number: '78라1234', type: '냉동탑차', weight: 4000, companyId: 1004, driver: '정유진', driverContact: '010-9000-2004' },
-    { id: 2005, number: '90마5678', type: '트레일러', weight: 10000, companyId: 1005, driver: '한지훈', driverContact: '010-9000-2005' }
-  ]);
-  const [vehicleForm, setVehicleForm] = React.useState({ id: '', number: '', type: '', weight: '', companyId: '', driver: '', driverContact: '' });
+  const [vehicles, setVehicles] = React.useState([]);
+  const [vehicleForm, setVehicleForm] = React.useState({ id: '', number: '', type: '', weight: '', companyId: '', driverId: '', driver: '', driverContact: '' });
   const [editVehicleId, setEditVehicleId] = React.useState(null);
 
   const handleVehicleChange = e => {
@@ -176,30 +172,92 @@ const AdminPage = () => {
     }
   };
 
-  const handleVehicleSubmit = e => {
+  const { toast } = useToast();
+
+  // 최초 마운트 시 DB에서 차량 목록 불러오기
+  React.useEffect(() => {
+    fetchVehicles().then(res => {
+      setVehicles(
+        res.data.map(v => ({
+          id: v.vehicle_id,
+          number: v.license_plate,
+          type: v.vehicle_type,
+          weight: v.max_weight,
+          companyId: Number(v.company_id),
+          driverId: v.driver_id ? String(v.driver_id) : '',
+          driver: '',
+          driverContact: ''
+        }))
+      );
+    });
+  }, []);
+
+  const handleVehicleSubmit = async e => {
     e.preventDefault();
-    if (!vehicleForm.id || !vehicleForm.number) return;
-    if (editVehicleId) {
-      setVehicles(vehicles.map(v => v.id === editVehicleId ? { ...vehicleForm, id: Number(vehicleForm.id), weight: Number(vehicleForm.weight), companyId: Number(vehicleForm.companyId) } : v));
+    if (!vehicleForm.number) return;
+    let old = vehicles.find(v => v.id === editVehicleId) || {};
+    const dbPayload = {
+      company_id: Number(vehicleForm.companyId) || null,
+      license_plate: vehicleForm.number,
+      vehicle_type: vehicleForm.type,
+      max_weight: Number(vehicleForm.weight) || null,
+      max_volume: editVehicleId ? (old.max_volume ?? 0) : 0,
+      driver_id: Number(vehicleForm.driverId) || null,
+      status: editVehicleId ? (old.status ?? 'AVAILABLE') : 'AVAILABLE',
+      current_location_lat: editVehicleId ? (old.current_location_lat ?? null) : null,
+      current_location_lng: editVehicleId ? (old.current_location_lng ?? null) : null,
+    };
+    try {
+      if (editVehicleId) {
+        await updateVehicle(editVehicleId, dbPayload);
+      } else {
+        await createVehicle(dbPayload);
+      }
+      fetchVehicles().then(res => {
+        setVehicles(
+          res.data.map(v => ({
+            id: v.vehicle_id,
+            number: v.license_plate,
+            type: v.vehicle_type,
+            weight: v.max_weight,
+            companyId: Number(v.company_id),
+            driverId: v.driver_id ? String(v.driver_id) : '',
+            driver: '',
+            driverContact: ''
+          }))
+        );
+      });
+      setVehicleForm({ id: '', number: '', type: '', weight: '', companyId: '', driverId: '', driver: '', driverContact: '' });
       setEditVehicleId(null);
-    } else {
-      if (vehicles.some(v => v.id === Number(vehicleForm.id))) return;
-      setVehicles([...vehicles, { ...vehicleForm, id: Number(vehicleForm.id), weight: Number(vehicleForm.weight), companyId: Number(vehicleForm.companyId) }]);
+    } catch (error) {
+      // 에러 처리 (필요시)
     }
-    setVehicleForm({ id: '', number: '', type: '', weight: '', companyId: '', driver: '', driverContact: '' });
   };
 
   const handleVehicleEdit = vehicle => {
-    setVehicleForm({ ...vehicle, id: String(vehicle.id), weight: String(vehicle.weight), companyId: String(vehicle.companyId) });
+    setVehicleForm({
+      ...vehicle,
+      driverId: vehicle.driverId || '',
+    });
     setEditVehicleId(vehicle.id);
   };
 
-  const handleVehicleDelete = id => {
-    setVehicles(vehicles.filter(v => v.id !== id));
-    if (editVehicleId === id) {
-      setVehicleForm({ id: '', number: '', type: '', weight: '', companyId: '', driver: '', driverContact: '' });
-      setEditVehicleId(null);
-    }
+  const handleVehicleDelete = async id => {
+    await deleteVehicle(id);
+    fetchVehicles().then(res => {
+      setVehicles(
+        res.data.map(v => ({
+          id: v.vehicle_id,
+          number: v.license_plate,
+          type: v.vehicle_type,
+          weight: v.max_weight,
+          companyId: Number(v.company_id),
+          driverId: v.driver_id ? String(v.driver_id) : '',
+          driver: '',
+          driverContact: ''
+        }))
+      );
+    });
   };
 
   const [tripDialogOpen, setTripDialogOpen] = React.useState(false);
@@ -255,40 +313,37 @@ const AdminPage = () => {
       setDriverForm(prev => ({ ...prev, [name]: value }));
     }
   };
-  const handleDriverSubmit = e => {
+  const handleDriverSubmit = async e => {
     e.preventDefault();
-    if (!driverForm.name || !driverForm.contact || !driverForm.companyId || !driverForm.status) return;
+    if (!driverForm.name) return;
     if (editDriverId) {
-      setDrivers(drivers.map(d => d.id === editDriverId ? { ...d, ...driverForm, companyId: Number(driverForm.companyId) } : d));
-      setEditDriverId(null);
+      await updateDriver(editDriverId, driverForm);
     } else {
-      const newId = drivers.length ? Math.max(...drivers.map(d => d.id)) + 1 : 1;
-      setDrivers([...drivers, { ...driverForm, id: newId, companyId: Number(driverForm.companyId) }]);
+      await createDriver(driverForm);
     }
+    fetchDrivers().then(res => setDrivers(res.data));
     setDriverForm({ name: '', contact: '', companyId: '', status: '' });
+    setEditDriverId(null);
   };
   const handleDriverEdit = driver => {
-    setDriverForm({ name: driver.name, contact: driver.contact, companyId: String(driver.companyId), status: driver.status });
+    setDriverForm(driver);
     setEditDriverId(driver.id);
   };
-  const handleDriverDelete = id => {
-    setDrivers(drivers.filter(d => d.id !== id));
-    if (editDriverId === id) {
-      setDriverForm({ name: '', contact: '', companyId: '', status: '' });
-      setEditDriverId(null);
-    }
+  const handleDriverDelete = async id => {
+    await deleteDriver(id);
+    fetchDrivers().then(res => setDrivers(res.data));
   };
 
   // 공차 운행 등록 팝업 상태 및 핸들러
   const [emptyRunDialogOpen, setEmptyRunDialogOpen] = React.useState(false);
   const [emptyRuns, setEmptyRuns] = React.useState([
-    { id: 3001, vehicleId: 2001, driverId: 1001, companyId: 1001, startLocation: '서울', endLocation: '부산', startTime: '2024-01-15 09:00', endTime: '2024-01-15 18:00', capacity: 3000, status: '예정' },
-    { id: 3002, vehicleId: 2002, driverId: 1002, companyId: 1002, startLocation: '대구', endLocation: '인천', startTime: '2024-01-16 10:00', endTime: '2024-01-16 19:00', capacity: 2500, status: '진행중' },
-    { id: 3003, vehicleId: 2003, driverId: 1003, companyId: 1003, startLocation: '광주', endLocation: '대전', startTime: '2024-01-17 08:00', endTime: '2024-01-17 17:00', capacity: 4000, status: '완료' }
+    { id: 3001, vehicleId: 2001, driverId: 1, companyId: 1001, startLocation: '서울', endLocation: '부산', startDate: '2024-01-15', startTime: '09:00', estimatedArrivalTime: '18:00', capacity: 3000, status: '예정' },
+    { id: 3002, vehicleId: 2002, driverId: 2, companyId: 1002, startLocation: '대구', endLocation: '인천', startDate: '2024-01-16', startTime: '10:00', estimatedArrivalTime: '19:00', capacity: 2500, status: '진행중' },
+    { id: 3003, vehicleId: 2003, driverId: 1, companyId: 1003, startLocation: '광주', endLocation: '대전', startDate: '2024-01-17', startTime: '08:00', estimatedArrivalTime: '17:00', capacity: 4000, status: '완료' }
   ]);
   const [emptyRunForm, setEmptyRunForm] = React.useState({ 
     id: '', vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', 
-    startTime: '', endTime: '', capacity: '', status: '' 
+    startDate: '', startTime: '', estimatedArrivalTime: '', capacity: '', status: '' 
   });
   const [editEmptyRunId, setEditEmptyRunId] = React.useState(null);
 
@@ -302,51 +357,27 @@ const AdminPage = () => {
     }
   };
 
-  const handleEmptyRunSubmit = e => {
+  const handleEmptyRunSubmit = async e => {
     e.preventDefault();
-    if (!emptyRunForm.id || !emptyRunForm.vehicleId || !emptyRunForm.startLocation || !emptyRunForm.endLocation) return;
+    if (!emptyRunForm.vehicleId || !emptyRunForm.startLocation || !emptyRunForm.endLocation) return;
     if (editEmptyRunId) {
-      setEmptyRuns(emptyRuns.map(er => er.id === editEmptyRunId ? { 
-        ...emptyRunForm, 
-        id: Number(emptyRunForm.id), 
-        vehicleId: Number(emptyRunForm.vehicleId), 
-        driverId: Number(emptyRunForm.driverId), 
-        companyId: Number(emptyRunForm.companyId), 
-        capacity: Number(emptyRunForm.capacity) 
-      } : er));
-      setEditEmptyRunId(null);
+      await updateEmptyRun(editEmptyRunId, emptyRunForm);
     } else {
-      if (emptyRuns.some(er => er.id === Number(emptyRunForm.id))) return;
-      setEmptyRuns([...emptyRuns, { 
-        ...emptyRunForm, 
-        id: Number(emptyRunForm.id), 
-        vehicleId: Number(emptyRunForm.vehicleId), 
-        driverId: Number(emptyRunForm.driverId), 
-        companyId: Number(emptyRunForm.companyId), 
-        capacity: Number(emptyRunForm.capacity) 
-      }]);
+      await createEmptyRun(emptyRunForm);
     }
-    setEmptyRunForm({ id: '', vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', startTime: '', endTime: '', capacity: '', status: '' });
+    fetchEmptyRuns().then(res => setEmptyRuns(res.data));
+    setEmptyRunForm({ id: '', vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', startDate: '', startTime: '', estimatedArrivalTime: '', capacity: '', status: '' });
+    setEditEmptyRunId(null);
   };
 
   const handleEmptyRunEdit = emptyRun => {
-    setEmptyRunForm({ 
-      ...emptyRun, 
-      id: String(emptyRun.id), 
-      vehicleId: String(emptyRun.vehicleId), 
-      driverId: String(emptyRun.driverId), 
-      companyId: String(emptyRun.companyId), 
-      capacity: String(emptyRun.capacity) 
-    });
+    setEmptyRunForm({ ...emptyRun, id: String(emptyRun.id), vehicleId: String(emptyRun.vehicleId), driverId: emptyRun.driverId ? String(emptyRun.driverId) : '', companyId: emptyRun.companyId ? String(emptyRun.companyId) : '', capacity: String(emptyRun.capacity) });
     setEditEmptyRunId(emptyRun.id);
   };
 
-  const handleEmptyRunDelete = id => {
-    setEmptyRuns(emptyRuns.filter(er => er.id !== id));
-    if (editEmptyRunId === id) {
-      setEmptyRunForm({ id: '', vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', startTime: '', endTime: '', capacity: '', status: '' });
-      setEditEmptyRunId(null);
-    }
+  const handleEmptyRunDelete = async id => {
+    await deleteEmptyRun(id);
+    fetchEmptyRuns().then(res => setEmptyRuns(res.data));
   };
 
   // 물류 요청 팝업 상태 및 핸들러
@@ -413,6 +444,80 @@ const AdminPage = () => {
     }
   };
 
+  // 헬퍼 함수들
+  const getCompanyName = (companyId) => {
+    const company = companies.find(c => c.id === companyId);
+    return company ? company.name : companyId;
+  };
+
+  const getVehicleNumber = (vehicleId) => {
+    const vehicle = vehicles.find(v => v.id === vehicleId);
+    return vehicle ? vehicle.number : vehicleId;
+  };
+
+  const getDriverName = (driverId) => {
+    const driver = users.find(d => d.phone === driverId);
+    return driver ? driver.name : driverId;
+  };
+
+  // 회사 관리 API 연동
+  useEffect(() => {
+    fetchCompanies().then(res => {
+      if (res && Array.isArray(res.data)) setCompanies(res.data);
+      else setCompanies([]);
+    });
+  }, []);
+
+  // 공차 운행 관리 API 연동
+  useEffect(() => {
+    fetchEmptyRuns().then(res => setEmptyRuns(res.data));
+  }, []);
+
+  // 물류 요청(화주) 관리 API 연동
+  const [shippers, setShippers] = React.useState([
+    { id: 1001, name: '화주A', contact: '010-1111-1001', address: '서울시 강남구', etc: '주문 완료' },
+    { id: 1002, name: '화주B', contact: '010-2222-2002', address: '인천시 연수구', etc: '배송 중' },
+    { id: 1003, name: '화주C', contact: '010-3333-3003', address: '대구시 동구', etc: '배송 완료' },
+    { id: 1004, name: '화주D', contact: '010-4444-4004', address: '광주시 남구', etc: '주문 중' },
+    { id: 1005, name: '화주E', contact: '010-5555-5005', address: '부산시 해운대구', etc: '주문 완료' }
+  ]);
+  const [shipperForm, setShipperForm] = React.useState({ id: '', name: '', contact: '', address: '', etc: '' });
+  const [editShipperId, setEditShipperId] = React.useState(null);
+
+  const handleShipperChange = e => {
+    const { name, value } = e.target;
+    if (name === 'id' || name === 'contact') {
+      // 숫자만 허용
+      const onlyNums = value.replace(/[^0-9]/g, '');
+      setShipperForm(prev => ({ ...prev, [name]: onlyNums }));
+    } else {
+      setShipperForm(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleShipperSubmit = async e => {
+    e.preventDefault();
+    if (!shipperForm.name) return;
+    if (editShipperId) {
+      await updateShipper(editShipperId, shipperForm);
+    } else {
+      await createShipper(shipperForm);
+    }
+    fetchShippers().then(res => setShippers(res.data));
+    setShipperForm({ id: '', name: '', contact: '', address: '', etc: '' });
+    setEditShipperId(null);
+  };
+
+  const handleShipperEdit = shipper => {
+    setShipperForm(shipper);
+    setEditShipperId(shipper.id);
+  };
+
+  const handleShipperDelete = async id => {
+    await deleteShipper(id);
+    fetchShippers().then(res => setShippers(res.data));
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 p-6 text-foreground">
       <div className="max-w-7xl mx-auto">
@@ -420,9 +525,9 @@ const AdminPage = () => {
         <div className="mb-8 relative">
           <div className="flex items-center justify-between">
             {/* 좌측: 홈버튼 */}
-            <div className="flex items-center gap-4 min-w-[180px]">
+            <a href="/" className="flex items-center gap-4 min-w-[180px] cursor-pointer no-underline">
               <Logo />
-            </div>
+            </a>
             {/* 중앙: 제목/부제목 */}
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center w-full pointer-events-none">
               <h1 className="text-3xl font-bold text-white pointer-events-auto">{t('admin.dashboard.title')}</h1>
@@ -569,14 +674,6 @@ const AdminPage = () => {
                   <Button
                     variant="outline"
                     className="w-full justify-start text-foreground border-border"
-                    onClick={() => setUserDialogOpen(true)}
-                  >
-                    <Users className="w-4 h-4 mr-2 text-complementary" />
-                    {t('admin.platformManagement.manageUsers')}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-foreground border-border"
                     onClick={() => setCompanyDialogOpen(true)}
                   >
                     <Building className="w-4 h-4 mr-2 text-complementary" />
@@ -597,6 +694,14 @@ const AdminPage = () => {
                   >
                     <User className="w-4 h-4 mr-2 text-complementary" />
                     {t('admin.platformManagement.manageDrivers')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-foreground border-border"
+                    onClick={() => setUserDialogOpen(true)}
+                  >
+                    <Users className="w-4 h-4 mr-2 text-complementary" />
+                    {t('admin.platformManagement.manageUsers')}
                   </Button>
                 </div>
                 {/* 신규 버튼 2개: 한 줄에 하나씩 세로로 배치 */}
@@ -729,7 +834,7 @@ const AdminPage = () => {
       </div>
 
       <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
-        <DialogContent className="max-w-3xl w-full bg-[#102040] text-white">
+        <DialogContent className="max-w-3xl w-full bg-[#0f1a2e] text-white">
           <DialogHeader>
             <DialogTitle className="text-white">{t('admin.platformManagement.manageUsers')}</DialogTitle>
           </DialogHeader>
@@ -738,7 +843,7 @@ const AdminPage = () => {
             <form className="flex flex-wrap gap-2 min-w-[600px]" onSubmit={handleSubmit}>
               <input
                 type="tel"
-                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
                 placeholder="전화번호"
                 name="phone"
                 value={form.phone}
@@ -747,7 +852,7 @@ const AdminPage = () => {
                 disabled={!!editPhone}
               />
               <input
-                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
                 placeholder="이름"
                 name="name"
                 value={form.name}
@@ -755,14 +860,14 @@ const AdminPage = () => {
                 required
               />
               <input
-                className="flex-1 min-w-[140px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[140px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
                 placeholder="이메일"
                 name="email"
                 value={form.email}
                 onChange={handleChange}
               />
               <select
-                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
                 name="role"
                 value={form.role}
                 onChange={handleChange}
@@ -794,7 +899,7 @@ const AdminPage = () => {
               </TableHeader>
               <TableBody>
                 {users.map((user) => (
-                  <TableRow key={user.phone} className="bg-[#1a2a40] border-blue-900">
+                  <TableRow key={user.phone} className="bg-[#1a2a40] border-[#2d4a6b]">
                     <TableCell className="text-white">{user.phone}</TableCell>
                     <TableCell className="text-white">{user.name}</TableCell>
                     <TableCell className="text-white">{user.email}</TableCell>
@@ -814,145 +919,15 @@ const AdminPage = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={companyDialogOpen} onOpenChange={setCompanyDialogOpen}>
-        <DialogContent className="max-w-6xl w-full bg-[#102040] text-white">
-          <DialogHeader>
-            <DialogTitle className="text-white">{t('admin.platformManagement.manageCompanies')}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 mt-4 overflow-x-auto">
-            <form className="flex flex-wrap gap-2 min-w-[900px]" onSubmit={handleCompanySubmit}>
-              <input
-                type="tel"
-                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder="회사ID"
-                name="id"
-                value={companyForm.id}
-                onChange={handleCompanyChange}
-                required
-                disabled={!!editCompanyId}
-              />
-              <input
-                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder="회사명"
-                name="name"
-                value={companyForm.name}
-                onChange={handleCompanyChange}
-                required
-              />
-              <input
-                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder="대표자명"
-                name="ceo"
-                value={companyForm.ceo}
-                onChange={handleCompanyChange}
-              />
-              <input
-                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder="대표전화"
-                name="contact"
-                value={companyForm.contact}
-                onChange={handleCompanyChange}
-              />
-              <input
-                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder="담당자명"
-                name="manager"
-                value={companyForm.manager}
-                onChange={handleCompanyChange}
-              />
-              <input
-                type="tel"
-                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder="담당자 연락처"
-                name="managerContact"
-                value={companyForm.managerContact}
-                onChange={handleCompanyChange}
-              />
-              <Button type="submit" className={`bg-blue-600 hover:bg-blue-700 text-white font-bold`}>
-                {editCompanyId ? '저장' : '등록'}
-              </Button>
-              {editCompanyId && (
-                <Button type="button" variant="outline" className="border-gray-400 text-gray-200" onClick={() => { setCompanyForm({ id: '', name: '', ceo: '', contact: '', manager: '', managerContact: '' }); setEditCompanyId(null); }}>취소</Button>
-              )}
-            </form>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-white">회사ID</TableHead>
-                  <TableHead className="text-white">회사명</TableHead>
-                  <TableHead className="text-white">대표자명</TableHead>
-                  <TableHead className="text-white">대표전화</TableHead>
-                  <TableHead className="text-white">담당자명</TableHead>
-                  <TableHead className="text-white">담당자 연락처</TableHead>
-                  <TableHead className="text-white">액션</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {companies.map((company) => (
-                  <TableRow key={company.id} className="bg-[#1a2a40] border-blue-900">
-                    <TableCell className="text-white">{company.id}</TableCell>
-                    <TableCell className="text-white">{company.name}</TableCell>
-                    <TableCell className="text-white">{company.ceo}</TableCell>
-                    <TableCell className="text-white">{company.contact}</TableCell>
-                    <TableCell className="text-white">{company.manager}</TableCell>
-                    <TableCell className="text-white">{company.managerContact}</TableCell>
-                    <TableCell>
-                      <Button size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold mr-2" onClick={() => handleCompanyEdit(company)}>수정</Button>
-                      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white font-bold" onClick={() => handleCompanyDelete(company.id)}>삭제</Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" className="border-gray-400 text-gray-200" onClick={() => setCompanyDialogOpen(false)}>{t('shipper.cancel')}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={vehicleDialogOpen} onOpenChange={setVehicleDialogOpen}>
-        <DialogContent className="max-w-6xl w-full bg-[#102040] text-white">
+        <DialogContent className="max-w-6xl w-full bg-[#0f1a2e] text-white">
           <DialogHeader>
             <DialogTitle className="text-white">{t('admin.platformManagement.manageVehicles')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4 overflow-x-auto">
             <form className="flex flex-wrap gap-2 min-w-[900px]" onSubmit={handleVehicleSubmit}>
-              <input
-                type="tel"
-                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder="차량ID"
-                name="id"
-                value={vehicleForm.id}
-                onChange={handleVehicleChange}
-                required
-                disabled={!!editVehicleId}
-              />
-              <input
-                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder="차량번호"
-                name="number"
-                value={vehicleForm.number}
-                onChange={handleVehicleChange}
-                required
-              />
-              <input
-                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder="차종"
-                name="type"
-                value={vehicleForm.type}
-                onChange={handleVehicleChange}
-              />
-              <input
-                type="tel"
-                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder="적재중량(kg)"
-                name="weight"
-                value={vehicleForm.weight}
-                onChange={handleVehicleChange}
-              />
               <select
-                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
                 name="companyId"
                 value={vehicleForm.companyId || ''}
                 onChange={e => setVehicleForm(prev => ({ ...prev, companyId: e.target.value }))}
@@ -960,56 +935,99 @@ const AdminPage = () => {
               >
                 <option value="">소유회사 선택</option>
                 {companies.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                  <option key={c.company_id} value={c.company_id}>{c.company_name}</option>
                 ))}
               </select>
               <input
-                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder="운전자명"
-                name="driver"
-                value={vehicleForm.driver}
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder="차량번호"
+                name="number"
+                value={vehicleForm.number}
                 onChange={handleVehicleChange}
+                required
               />
+              <select
+                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                name="type"
+                value={vehicleForm.type}
+                onChange={handleVehicleChange}
+                required
+              >
+                <option value="">차종 선택</option>
+                <option value="트럭">트럭</option>
+                <option value="탑차">탑차</option>
+                <option value="윙바디">윙바디</option>
+                <option value="냉동탑차">냉동탑차</option>
+                <option value="트레일러">트레일러</option>
+                <option value="기타">기타</option>
+              </select>
               <input
                 type="tel"
-                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder="적재중량(kg)"
+                name="weight"
+                value={vehicleForm.weight}
+                onChange={handleVehicleChange}
+              />
+              <select
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                name="driverId"
+                value={vehicleForm.driverId || ''}
+                onChange={e => setVehicleForm(prev => ({ ...prev, driverId: e.target.value }))}
+                required
+              >
+                <option value="">운전자 선택</option>
+                {drivers.filter(d => String(d.companyId) === String(vehicleForm.companyId)).map(d => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+              <input
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
                 placeholder="운전자 연락처"
                 name="driverContact"
-                value={vehicleForm.driverContact}
-                onChange={handleVehicleChange}
+                value={drivers.find(d => String(d.id) === String(vehicleForm.driverId))?.contact || ''}
+                readOnly
               />
               <Button type="submit" className={`bg-blue-600 hover:bg-blue-700 text-white font-bold`}>
                 {editVehicleId ? '저장' : '등록'}
               </Button>
               {editVehicleId && (
-                <Button type="button" variant="outline" className="border-gray-400 text-gray-200" onClick={() => { setVehicleForm({ id: '', number: '', type: '', weight: '', companyId: '', driver: '', driverContact: '' }); setEditVehicleId(null); }}>취소</Button>
+                <Button type="button" variant="outline" className="border-gray-400 text-gray-200" onClick={() => { setVehicleForm({ id: '', number: '', type: '', weight: '', companyId: '', driverId: '', driver: '', driverContact: '' }); setEditVehicleId(null); }}>취소</Button>
               )}
             </form>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-white">차량ID</TableHead>
+                  <TableHead className="text-white">소유회사</TableHead>
                   <TableHead className="text-white">차량번호</TableHead>
                   <TableHead className="text-white">차종</TableHead>
                   <TableHead className="text-white">적재중량(kg)</TableHead>
-                  <TableHead className="text-white">소유회사</TableHead>
                   <TableHead className="text-white">운전자명</TableHead>
                   <TableHead className="text-white">운전자 연락처</TableHead>
-                  <TableHead className="text-white">액션</TableHead>
+                  <TableHead className="text-white"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {vehicles.map((vehicle) => {
-                  const company = companies.find(c => String(c.id) === String(vehicle.companyId));
+                  const company = companies.find(c => Number(c.company_id) === Number(vehicle.companyId));
                   return (
-                    <TableRow key={vehicle.id} className="bg-[#1a2a40] border-blue-900">
-                      <TableCell className="text-white">{vehicle.id}</TableCell>
+                    <TableRow key={vehicle.id} className="bg-[#1a2a40] border-[#2d4a6b]">
+                      <TableCell className="text-white">{company ? company.company_name : '-'}</TableCell>
                       <TableCell className="text-white">{vehicle.number}</TableCell>
                       <TableCell className="text-white">{vehicle.type}</TableCell>
                       <TableCell className="text-white">{vehicle.weight}</TableCell>
-                      <TableCell className="text-white">{company ? company.name : '-'}</TableCell>
-                      <TableCell className="text-white">{vehicle.driver}</TableCell>
-                      <TableCell className="text-white">{vehicle.driverContact}</TableCell>
+                      <TableCell className="text-white">
+                        {(() => {
+                          const driver = drivers.find(d => String(d.id) === String(vehicle.driverId));
+                          return driver ? driver.name : '';
+                        })()}
+                      </TableCell>
+                      <TableCell className="text-white">
+                        {(() => {
+                          const driver = drivers.find(d => String(d.id) === String(vehicle.driverId));
+                          return driver ? driver.contact : '';
+                        })()}
+                      </TableCell>
                       <TableCell>
                         <Button size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold mr-2" onClick={() => handleVehicleEdit(vehicle)}>수정</Button>
                         <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white font-bold" onClick={() => handleVehicleDelete(vehicle.id)}>삭제</Button>
@@ -1027,15 +1045,27 @@ const AdminPage = () => {
       </Dialog>
 
       <Dialog open={driverDialogOpen} onOpenChange={setDriverDialogOpen}>
-        <DialogContent className="max-w-3xl w-full bg-[#102040] text-white">
+        <DialogContent className="max-w-3xl w-full bg-[#0f1a2e] text-white">
           <DialogHeader>
             <DialogTitle className="text-white">{t('admin.platformManagement.manageDrivers')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4 overflow-x-auto">
             <form className="flex flex-wrap gap-2 min-w-[600px]" onSubmit={handleDriverSubmit}>
+              <select
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                name="companyId"
+                value={driverForm.companyId}
+                onChange={handleDriverChange}
+                required
+              >
+                <option value="">회사명 선택</option>
+                {companies.map((c) => (
+                  <option key={c.company_id} value={c.company_id}>{c.company_name}</option>
+                ))}
+              </select>
               <input
-                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder={t('driver.name') || '이름'}
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder="운전자명"
                 name="name"
                 value={driverForm.name}
                 onChange={handleDriverChange}
@@ -1043,36 +1073,24 @@ const AdminPage = () => {
               />
               <input
                 type="tel"
-                className="flex-1 min-w-[140px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder={t('driver.contact') || '연락처'}
+                className="flex-1 min-w-[140px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder="연락처"
                 name="contact"
                 value={driverForm.contact}
                 onChange={handleDriverChange}
                 required
               />
               <select
-                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
-                name="companyId"
-                value={driverForm.companyId}
-                onChange={handleDriverChange}
-                required
-              >
-                <option value="">{t('driver.company') || '소속회사 선택'}</option>
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-              <select
-                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
                 name="status"
                 value={driverForm.status}
                 onChange={handleDriverChange}
                 required
               >
-                <option value="">{t('driver.status') || '상태 선택'}</option>
-                <option value="재직">{t('driver.status.재직')}</option>
-                <option value="휴직">{t('driver.status.휴직')}</option>
-                <option value="퇴사">{t('driver.status.퇴사')}</option>
+                <option value="">상태 선택</option>
+                <option value="재직">재직</option>
+                <option value="휴직">휴직</option>
+                <option value="퇴사">퇴사</option>
               </select>
               <Button type="submit" className={`bg-blue-600 hover:bg-blue-700 text-white font-bold`}>
                 {editDriverId ? t('common.save') || '저장' : t('common.register') || '등록'}
@@ -1084,21 +1102,21 @@ const AdminPage = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-white">{t('driver.name') || '이름'}</TableHead>
-                  <TableHead className="text-white">{t('driver.contact') || '연락처'}</TableHead>
-                  <TableHead className="text-white">{t('driver.company') || '소속회사'}</TableHead>
-                  <TableHead className="text-white">{t('driver.status') || '상태'}</TableHead>
-                  <TableHead className="text-white">{t('common.action') || '액션'}</TableHead>
+                  <TableHead className="text-white">회사명</TableHead>
+                  <TableHead className="text-white">운전자명</TableHead>
+                  <TableHead className="text-white">연락처</TableHead>
+                  <TableHead className="text-white">상태</TableHead>
+                  <TableHead className="text-white"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {drivers.map((driver) => {
-                  const company = companies.find(c => String(c.id) === String(driver.companyId));
+                  const company = companies.find(c => String(c.company_id) === String(driver.companyId));
                   return (
-                    <TableRow key={driver.id} className="bg-[#1a2a40] border-blue-900">
+                    <TableRow key={driver.id} className="bg-[#1a2a40] border-[#2d4a6b]">
+                      <TableCell className="text-white">{company ? company.company_name : '-'}</TableCell>
                       <TableCell className="text-white">{driver.name}</TableCell>
                       <TableCell className="text-white">{driver.contact}</TableCell>
-                      <TableCell className="text-white">{company ? company.name : '-'}</TableCell>
                       <TableCell className="text-white">{t('driver.status.' + driver.status) || driver.status}</TableCell>
                       <TableCell>
                         <Button size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold mr-2" onClick={() => handleDriverEdit(driver)}>{t('common.edit') || '수정'}</Button>
@@ -1118,38 +1136,48 @@ const AdminPage = () => {
 
       {/* 공차 운행 등록 팝업 */}
       <Dialog open={emptyRunDialogOpen} onOpenChange={setEmptyRunDialogOpen}>
-        <DialogContent className="max-w-6xl w-full bg-[#102040] text-white">
+        <DialogContent className="max-w-6xl w-full bg-[#0f1a2e] text-white">
           <DialogHeader>
-            <DialogTitle className="text-white">{t('emptyRun.title')}</DialogTitle>
+            <DialogTitle className="text-foreground text-2xl font-bold">{t('emptyRun.title')}</DialogTitle>
+            <p className="text-muted-foreground text-base leading-relaxed">{t('emptyRun.description')}</p>
           </DialogHeader>
           <div className="space-y-4 mt-4 overflow-x-auto">
             <form className="flex flex-wrap gap-2 min-w-[1200px]" onSubmit={handleEmptyRunSubmit}>
               <input
-                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder={t('emptyRun.vehicle')}
-                name="vehicleId"
-                value={emptyRunForm.vehicleId}
+                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                placeholder={t('emptyRun.id')}
+                name="id"
+                value={emptyRunForm.id}
                 onChange={handleEmptyRunChange}
                 required
+                disabled={!!editEmptyRunId}
               />
-              <input
-                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder={t('emptyRun.driver')}
-                name="driverId"
-                value={emptyRunForm.driverId}
-                onChange={handleEmptyRunChange}
-                required
-              />
-              <input
-                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
-                placeholder="회사ID"
+              <select
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
                 name="companyId"
                 value={emptyRunForm.companyId}
                 onChange={handleEmptyRunChange}
                 required
-              />
+              >
+                <option value="">회사 선택</option>
+                {companies.map((company) => (
+                  <option key={company.company_id} value={company.company_id}>{company.company_name}</option>
+                ))}
+              </select>
+              <select
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                name="driverId"
+                value={emptyRunForm.driverId}
+                onChange={handleEmptyRunChange}
+                required
+              >
+                <option value="">운전자 선택</option>
+                {drivers.map((driver) => (
+                  <option key={driver.id} value={driver.id}>{driver.name}</option>
+                ))}
+              </select>
               <input
-                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
                 placeholder={t('emptyRun.startLocation')}
                 name="startLocation"
                 value={emptyRunForm.startLocation}
@@ -1157,7 +1185,7 @@ const AdminPage = () => {
                 required
               />
               <input
-                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
                 placeholder={t('emptyRun.endLocation')}
                 name="endLocation"
                 value={emptyRunForm.endLocation}
@@ -1165,23 +1193,31 @@ const AdminPage = () => {
                 required
               />
               <input
-                type="datetime-local"
-                className="flex-1 min-w-[180px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                type="date"
+                className="flex-1 min-w-[140px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                name="startDate"
+                value={emptyRunForm.startDate}
+                onChange={handleEmptyRunChange}
+                required
+              />
+              <input
+                type="time"
+                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
                 name="startTime"
                 value={emptyRunForm.startTime}
                 onChange={handleEmptyRunChange}
                 required
               />
               <input
-                type="datetime-local"
-                className="flex-1 min-w-[180px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
-                name="endTime"
-                value={emptyRunForm.endTime}
+                type="time"
+                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                name="estimatedArrivalTime"
+                value={emptyRunForm.estimatedArrivalTime}
                 onChange={handleEmptyRunChange}
                 required
               />
               <input
-                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
                 placeholder={t('emptyRun.capacity')}
                 name="capacity"
                 value={emptyRunForm.capacity}
@@ -1189,7 +1225,7 @@ const AdminPage = () => {
                 required
               />
               <select
-                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
                 name="status"
                 value={emptyRunForm.status}
                 onChange={handleEmptyRunChange}
@@ -1201,16 +1237,16 @@ const AdminPage = () => {
                 <option value="완료">완료</option>
                 <option value="취소">취소</option>
               </select>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-base px-6 py-2">
                 {editEmptyRunId ? t('emptyRun.save') : t('emptyRun.register')}
               </Button>
               {editEmptyRunId && (
                 <Button 
                   type="button" 
                   variant="outline" 
-                  className="border-gray-400 text-gray-200" 
+                  className="border-gray-400 text-gray-200 font-semibold text-base px-6 py-2" 
                   onClick={() => { 
-                    setEmptyRunForm({ id: '', vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', startTime: '', endTime: '', capacity: '', status: '' }); 
+                    setEmptyRunForm({ id: '', vehicleId: '', driverId: '', companyId: '', startLocation: '', endLocation: '', startDate: '', startTime: '', estimatedArrivalTime: '', capacity: '', status: '' }); 
                     setEditEmptyRunId(null); 
                   }}
                 >
@@ -1221,43 +1257,45 @@ const AdminPage = () => {
             <Table className="min-w-[1200px] w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-white">ID</TableHead>
-                  <TableHead className="text-white">{t('emptyRun.vehicle')}</TableHead>
-                  <TableHead className="text-white">{t('emptyRun.driver')}</TableHead>
-                  <TableHead className="text-white">회사ID</TableHead>
-                  <TableHead className="text-white">{t('emptyRun.startLocation')}</TableHead>
-                  <TableHead className="text-white">{t('emptyRun.endLocation')}</TableHead>
-                  <TableHead className="text-white">{t('emptyRun.startTime')}</TableHead>
-                  <TableHead className="text-white">{t('emptyRun.endTime')}</TableHead>
-                  <TableHead className="text-white">{t('emptyRun.capacity')}</TableHead>
-                  <TableHead className="text-white">{t('emptyRun.status')}</TableHead>
-                  <TableHead className="text-white">{t('emptyRun.action')}</TableHead>
+                  <TableHead className="text-white font-semibold text-base">{t('emptyRun.id')}</TableHead>
+                  <TableHead className="text-white font-semibold text-base">회사명</TableHead>
+                  <TableHead className="text-white font-semibold text-base">차량번호</TableHead>
+                  <TableHead className="text-white font-semibold text-base">운전자명</TableHead>
+                  <TableHead className="text-white font-semibold text-base">{t('emptyRun.startLocation')}</TableHead>
+                  <TableHead className="text-white font-semibold text-base">{t('emptyRun.endLocation')}</TableHead>
+                  <TableHead className="text-white font-semibold text-base">출발일자</TableHead>
+                  <TableHead className="text-white font-semibold text-base">출발시각</TableHead>
+                  <TableHead className="text-white font-semibold text-base">도착예정시각</TableHead>
+                  <TableHead className="text-white font-semibold text-base">{t('emptyRun.capacity')}</TableHead>
+                  <TableHead className="text-white font-semibold text-base">{t('emptyRun.status')}</TableHead>
+                  <TableHead className="text-white font-semibold text-base">{t('emptyRun.action')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {emptyRuns.map((emptyRun) => (
-                  <TableRow key={emptyRun.id} className="bg-[#1a2a40] border-blue-900">
-                    <TableCell className="text-white">{emptyRun.id}</TableCell>
-                    <TableCell className="text-white">{emptyRun.vehicleId}</TableCell>
-                    <TableCell className="text-white">{emptyRun.driverId}</TableCell>
-                    <TableCell className="text-white">{emptyRun.companyId}</TableCell>
-                    <TableCell className="text-white">{emptyRun.startLocation}</TableCell>
-                    <TableCell className="text-white">{emptyRun.endLocation}</TableCell>
-                    <TableCell className="text-white">{emptyRun.startTime?.replace('T', ' ')}</TableCell>
-                    <TableCell className="text-white">{emptyRun.endTime?.replace('T', ' ')}</TableCell>
-                    <TableCell className="text-white">{emptyRun.capacity}</TableCell>
-                    <TableCell className="text-white">{emptyRun.status}</TableCell>
+                  <TableRow key={emptyRun.id} className="bg-[#1a2a40] border-[#2d4a6b]">
+                    <TableCell className="text-white text-base">{emptyRun.id}</TableCell>
+                    <TableCell className="text-white text-base">{companies.find(c => c.company_id === Number(emptyRun.companyId))?.company_name || '-'}</TableCell>
+                    <TableCell className="text-white text-base">{getVehicleNumber(emptyRun.vehicleId)}</TableCell>
+                    <TableCell className="text-white text-base">{drivers.find(d => d.id === Number(emptyRun.driverId))?.name || '-'}</TableCell>
+                    <TableCell className="text-white text-base">{emptyRun.startLocation}</TableCell>
+                    <TableCell className="text-white text-base">{emptyRun.endLocation}</TableCell>
+                    <TableCell className="text-white text-base">{emptyRun.startDate?.replace('T', ' ')}</TableCell>
+                    <TableCell className="text-white text-base">{emptyRun.startTime?.replace('T', ' ')}</TableCell>
+                    <TableCell className="text-white text-base">{emptyRun.estimatedArrivalTime?.replace('T', ' ')}</TableCell>
+                    <TableCell className="text-white text-base">{emptyRun.capacity}</TableCell>
+                    <TableCell className="text-white text-base">{emptyRun.status}</TableCell>
                     <TableCell>
                       <Button 
                         size="sm" 
-                        className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold mr-2" 
+                        className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold mr-2 font-semibold" 
                         onClick={() => handleEmptyRunEdit(emptyRun)}
                       >
                         {t('emptyRun.edit')}
                       </Button>
                       <Button 
                         size="sm" 
-                        className="bg-red-600 hover:bg-red-700 text-white font-bold" 
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold font-semibold" 
                         onClick={() => handleEmptyRunDelete(emptyRun.id)}
                       >
                         {t('emptyRun.delete')}
@@ -1269,7 +1307,7 @@ const AdminPage = () => {
             </Table>
           </div>
           <DialogFooter>
-            <Button variant="outline" className="border-gray-400 text-gray-200" onClick={() => setEmptyRunDialogOpen(false)}>
+            <Button variant="outline" className="border-gray-400 text-gray-200 font-semibold text-base px-6 py-2" onClick={() => setEmptyRunDialogOpen(false)}>
               {t('emptyRun.cancel')}
             </Button>
           </DialogFooter>
@@ -1278,14 +1316,14 @@ const AdminPage = () => {
 
       {/* 물류 요청 팝업 */}
       <Dialog open={logisticsRequestDialogOpen} onOpenChange={setLogisticsRequestDialogOpen}>
-        <DialogContent className="max-w-6xl w-full bg-[#102040] text-white">
+        <DialogContent className="max-w-6xl w-full bg-[#0f1a2e] text-white">
           <DialogHeader>
             <DialogTitle className="text-white">{t('logisticsRequest.title')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4 overflow-x-auto">
             <form className="flex flex-wrap gap-2 min-w-[1200px]" onSubmit={handleLogisticsRequestSubmit}>
               <input
-                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
                 placeholder={t('logisticsRequest.id')}
                 name="id"
                 value={logisticsRequestForm.id}
@@ -1294,7 +1332,7 @@ const AdminPage = () => {
                 disabled={!!editLogisticsRequestId}
               />
               <input
-                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[80px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
                 placeholder={t('logisticsRequest.shipperId')}
                 name="shipperId"
                 value={logisticsRequestForm.shipperId}
@@ -1302,7 +1340,7 @@ const AdminPage = () => {
                 required
               />
               <select
-                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
                 name="cargoType"
                 value={logisticsRequestForm.cargoType}
                 onChange={handleLogisticsRequestChange}
@@ -1317,7 +1355,7 @@ const AdminPage = () => {
                 <option value="기타">기타</option>
               </select>
               <input
-                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
                 placeholder={t('logisticsRequest.startLocation')}
                 name="startLocation"
                 value={logisticsRequestForm.startLocation}
@@ -1325,7 +1363,7 @@ const AdminPage = () => {
                 required
               />
               <input
-                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
                 placeholder={t('logisticsRequest.endLocation')}
                 name="endLocation"
                 value={logisticsRequestForm.endLocation}
@@ -1334,7 +1372,7 @@ const AdminPage = () => {
               />
               <input
                 type="datetime-local"
-                className="flex-1 min-w-[180px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[180px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
                 name="startTime"
                 value={logisticsRequestForm.startTime}
                 onChange={handleLogisticsRequestChange}
@@ -1342,14 +1380,14 @@ const AdminPage = () => {
               />
               <input
                 type="datetime-local"
-                className="flex-1 min-w-[180px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[180px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
                 name="endTime"
                 value={logisticsRequestForm.endTime}
                 onChange={handleLogisticsRequestChange}
                 required
               />
               <input
-                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400"
                 placeholder={t('logisticsRequest.weight')}
                 name="weight"
                 value={logisticsRequestForm.weight}
@@ -1357,7 +1395,7 @@ const AdminPage = () => {
                 required
               />
               <select
-                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
                 name="priority"
                 value={logisticsRequestForm.priority}
                 onChange={handleLogisticsRequestChange}
@@ -1369,7 +1407,7 @@ const AdminPage = () => {
                 <option value="특급">특급</option>
               </select>
               <select
-                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[100px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
                 name="status"
                 value={logisticsRequestForm.status}
                 onChange={handleLogisticsRequestChange}
@@ -1416,7 +1454,7 @@ const AdminPage = () => {
               </TableHeader>
               <TableBody>
                 {logisticsRequests.map((logisticsRequest) => (
-                  <TableRow key={logisticsRequest.id} className="bg-[#1a2a40] border-blue-900">
+                  <TableRow key={logisticsRequest.id} className="bg-[#1a2a40] border-[#2d4a6b]">
                     <TableCell className="text-white">{logisticsRequest.id}</TableCell>
                     <TableCell className="text-white">{logisticsRequest.shipperId}</TableCell>
                     <TableCell className="text-white">{logisticsRequest.cargoType}</TableCell>
@@ -1457,14 +1495,14 @@ const AdminPage = () => {
       </Dialog>
 
       <Dialog open={tripDialogOpen} onOpenChange={setTripDialogOpen}>
-        <DialogContent className="max-w-6xl w-full bg-[#102040] text-white">
+        <DialogContent className="max-w-6xl w-full bg-[#0f1a2e] text-white">
           <DialogHeader>
             <DialogTitle className="text-white">{t('admin.platformManagement.manageTrips') || '차량운행 내역 관리'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4 overflow-x-auto">
             <form className="flex flex-wrap gap-2 min-w-[900px]" onSubmit={handleTripSubmit}>
               <select
-                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
                 name="vehicleId"
                 value={tripForm.vehicleId}
                 onChange={handleTripChange}
@@ -1476,7 +1514,7 @@ const AdminPage = () => {
                 ))}
               </select>
               <select
-                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
+                className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400"
                 name="driverId"
                 value={tripForm.driverId}
                 onChange={handleTripChange}
@@ -1487,11 +1525,11 @@ const AdminPage = () => {
                   <option key={u.phone} value={u.phone}>{u.name}</option>
                 ))}
               </select>
-              <input className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400" placeholder="출발지" name="departure" value={tripForm.departure} onChange={handleTripChange} required />
-              <input className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400" placeholder="도착지" name="arrival" value={tripForm.arrival} onChange={handleTripChange} required />
-              <input type="datetime-local" className="flex-1 min-w-[180px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400" name="departureTime" value={tripForm.departureTime} onChange={handleTripChange} />
-              <input type="datetime-local" className="flex-1 min-w-[180px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400" name="arrivalTime" value={tripForm.arrivalTime} onChange={handleTripChange} />
-              <select className="flex-1 min-w-[100px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400" name="status" value={tripForm.status} onChange={handleTripChange}>
+              <input className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400" placeholder="출발지" name="departure" value={tripForm.departure} onChange={handleTripChange} required />
+              <input className="flex-1 min-w-[120px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400" placeholder="도착지" name="arrival" value={tripForm.arrival} onChange={handleTripChange} required />
+              <input type="datetime-local" className="flex-1 min-w-[180px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400" name="departureTime" value={tripForm.departureTime} onChange={handleTripChange} />
+              <input type="datetime-local" className="flex-1 min-w-[180px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400" name="arrivalTime" value={tripForm.arrivalTime} onChange={handleTripChange} />
+              <select className="flex-1 min-w-[100px] px-2 py-1 rounded border border-[#2d4a6b] bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400" name="status" value={tripForm.status} onChange={handleTripChange}>
                 <option value="">상태 선택</option>
                 <option value="완료">완료</option>
                 <option value="진행중">진행중</option>
@@ -1523,7 +1561,7 @@ const AdminPage = () => {
                   const vehicle = vehicles.find(v => String(v.id) === String(trip.vehicleId));
                   const driver = users.find(u => String(u.phone) === String(trip.driverId));
                   return (
-                    <TableRow key={trip.id} className="bg-[#1a2a40] border-blue-900">
+                    <TableRow key={trip.id} className="bg-[#1a2a40] border-[#2d4a6b]">
                       <TableCell className="text-white">{trip.id}</TableCell>
                       <TableCell className="text-white">{vehicle ? vehicle.number : '-'}</TableCell>
                       <TableCell className="text-white">{driver ? driver.name : '-'}</TableCell>
@@ -1546,6 +1584,77 @@ const AdminPage = () => {
             <Button variant="outline" className="border-gray-400 text-gray-200" onClick={() => setTripDialogOpen(false)}>
               {t('shipper.cancel')}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 회사 관리 팝업 */}
+      <Dialog open={companyDialogOpen} onOpenChange={setCompanyDialogOpen}>
+        <DialogContent className="max-w-6xl w-full bg-[#102040] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white">회사 관리</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4 overflow-x-auto">
+            <form className="flex flex-wrap gap-2 min-w-[900px]" onSubmit={handleCompanySubmit}>
+              <input name="company_name" placeholder="회사명" value={companyForm.company_name} onChange={handleCompanyChange} required className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400" />
+              <input name="business_number" placeholder="사업자번호" value={companyForm.business_number} onChange={handleCompanyChange} required className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400" />
+              <input name="phone" placeholder="대표전화" value={companyForm.phone} onChange={handleCompanyChange} required className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400" />
+              <input name="email" placeholder="이메일" value={companyForm.email} onChange={handleCompanyChange} className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400" />
+              <input name="address" placeholder="주소" value={companyForm.address} onChange={handleCompanyChange} className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400" />
+              <select name="company_type" value={companyForm.company_type} onChange={handleCompanyChange} required className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400">
+                <option value="">회사 유형</option>
+                <option value="LOGISTICS">운송업</option>
+                <option value="CARGO_OWNER">화주</option>
+                <option value="ETC">기타</option>
+              </select>
+              <select name="status" value={companyForm.status} onChange={handleCompanyChange} required className="flex-1 min-w-[120px] px-2 py-1 rounded border border-blue-900 bg-[#1a2a40] text-white focus:ring-2 focus:ring-blue-400">
+                <option value="">상태</option>
+                <option value="ACTIVE">활성</option>
+                <option value="INACTIVE">비활성</option>
+              </select>
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                {editCompanyId ? '저장' : '등록'}
+              </Button>
+              {editCompanyId && (
+                <Button type="button" variant="outline" className="bg-gray-600 border-gray-400 text-gray-200" onClick={() => { setCompanyForm({ company_id: '', company_name: '', business_number: '', phone: '', email: '', address: '', company_type: '', status: '' }); setEditCompanyId(null); }}>취소</Button>
+              )}
+            </form>
+            <div className="w-full overflow-x-auto">
+              <Table className="min-w-[1200px] w-full">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-white">회사명</TableHead>
+                    <TableHead className="text-white">사업자번호</TableHead>
+                    <TableHead className="text-white">대표전화</TableHead>
+                    <TableHead className="text-white">이메일</TableHead>
+                    <TableHead className="text-white">주소</TableHead>
+                    <TableHead className="text-white">회사 유형</TableHead>
+                    <TableHead className="text-white">상태</TableHead>
+                    <TableHead className="text-white">액션</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(companies || []).map((company) => (
+                    <TableRow key={company.company_id} className="bg-[#1a2a40] border-[#2d4a6b]">
+                      <TableCell className="text-white">{company.company_name}</TableCell>
+                      <TableCell className="text-white">{company.business_number}</TableCell>
+                      <TableCell className="text-white">{company.phone}</TableCell>
+                      <TableCell className="text-white">{company.email}</TableCell>
+                      <TableCell className="text-white">{company.address}</TableCell>
+                      <TableCell className="text-white">{company.company_type}</TableCell>
+                      <TableCell className="text-white">{company.status}</TableCell>
+                      <TableCell>
+                        <Button size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold mr-2" onClick={() => handleCompanyEdit(company)}>수정</Button>
+                        <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white font-bold" onClick={() => handleCompanyDelete(company.company_id)}>삭제</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="bg-gray-600 border-gray-400 text-gray-200" onClick={() => setCompanyDialogOpen(false)}>취소</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

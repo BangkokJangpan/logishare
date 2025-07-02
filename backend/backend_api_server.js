@@ -3,6 +3,9 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
+const db = new sqlite3.Database(path.resolve(__dirname, '../shared_logistics.db'));
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -39,6 +42,182 @@ let posts = [
   { id: 2, title: '두 번째 포스트', content: '두 번째 내용', userId: 2, createdAt: new Date() }
 ];
 
+// ===== 회사(companies) 샘플 데이터 및 API =====
+// let companies = [ ... ]; // 기존 메모리 배열 주석 처리
+
+// ===== companies DB 연동 API (DB 컬럼명 기준) =====
+app.get('/api/companies', (req, res) => {
+  db.all('SELECT * FROM companies', [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'DB 조회 오류', error: err.message });
+    }
+    res.json({ success: true, data: rows });
+  });
+});
+app.post('/api/companies', (req, res) => {
+  const { company_name, business_number, phone, email, address, company_type, status } = req.body;
+  const sql = `INSERT INTO companies (company_name, business_number, phone, email, address, company_type, status) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+  const params = [company_name, business_number, phone, email, address, company_type, status];
+  db.run(sql, params, function(err) {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'DB 등록 오류', error: err.message });
+    }
+    db.get('SELECT * FROM companies WHERE company_id = ?', [this.lastID], (err2, row) => {
+      if (err2) {
+        return res.status(500).json({ success: false, message: 'DB 조회 오류', error: err2.message });
+      }
+      res.json({ success: true, data: row });
+    });
+  });
+});
+app.put('/api/companies/:id', (req, res) => {
+  const { company_name, business_number, phone, email, address, company_type, status } = req.body;
+  const sql = `UPDATE companies SET company_name=?, business_number=?, phone=?, email=?, address=?, company_type=?, status=?, updated_at=CURRENT_TIMESTAMP WHERE company_id=?`;
+  const params = [company_name, business_number, phone, email, address, company_type, status, req.params.id];
+  db.run(sql, params, function(err) {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'DB 수정 오류', error: err.message });
+    }
+    db.get('SELECT * FROM companies WHERE company_id = ?', [req.params.id], (err2, row) => {
+      if (err2) {
+        return res.status(500).json({ success: false, message: 'DB 조회 오류', error: err2.message });
+      }
+      res.json({ success: true, data: row });
+    });
+  });
+});
+app.delete('/api/companies/:id', (req, res) => {
+  db.run('DELETE FROM companies WHERE company_id = ?', [req.params.id], function(err) {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'DB 삭제 오류', error: err.message });
+    }
+    res.json({ success: true, message: '회사 삭제 완료' });
+  });
+});
+
+// ===== vehicles 샘플 데이터 및 API =====
+// let vehicles = [ ... ]; // 기존 메모리 배열 주석 처리
+
+// 차량 목록 조회
+app.get('/api/vehicles', (req, res) => {
+  db.all('SELECT * FROM vehicles', [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'DB 조회 오류', error: err.message });
+    }
+    res.json({ success: true, data: rows });
+  });
+});
+
+// 차량 등록
+app.post('/api/vehicles', (req, res) => {
+  const { company_id, license_plate, vehicle_type, max_weight, max_volume, driver_id, status, current_location_lat, current_location_lng } = req.body;
+  const sql = `INSERT INTO vehicles (company_id, license_plate, vehicle_type, max_weight, max_volume, driver_id, status, current_location_lat, current_location_lng) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  const params = [company_id, license_plate, vehicle_type, max_weight, max_volume, driver_id, status, current_location_lat, current_location_lng];
+  db.run(sql, params, function(err) {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'DB 등록 오류', error: err.message });
+    }
+    db.get('SELECT * FROM vehicles WHERE vehicle_id = ?', [this.lastID], (err2, row) => {
+      if (err2) {
+        return res.status(500).json({ success: false, message: 'DB 조회 오류', error: err2.message });
+      }
+      res.json({ success: true, data: row });
+    });
+  });
+});
+
+// 차량 수정
+app.put('/api/vehicles/:id', (req, res) => {
+  const { company_id, license_plate, vehicle_type, max_weight, max_volume, driver_id, status, current_location_lat, current_location_lng } = req.body;
+  const sql = `UPDATE vehicles SET company_id=?, license_plate=?, vehicle_type=?, max_weight=?, max_volume=?, driver_id=?, status=?, current_location_lat=?, current_location_lng=?, updated_at=CURRENT_TIMESTAMP WHERE vehicle_id=?`;
+  const params = [company_id, license_plate, vehicle_type, max_weight, max_volume, driver_id, status, current_location_lat, current_location_lng, req.params.id];
+  db.run(sql, params, function(err) {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'DB 수정 오류', error: err.message });
+    }
+    db.get('SELECT * FROM vehicles WHERE vehicle_id = ?', [req.params.id], (err2, row) => {
+      if (err2) {
+        return res.status(500).json({ success: false, message: 'DB 조회 오류', error: err2.message });
+      }
+      res.json({ success: true, data: row });
+    });
+  });
+});
+
+// 차량 삭제
+app.delete('/api/vehicles/:id', (req, res) => {
+  db.run('DELETE FROM vehicles WHERE vehicle_id = ?', [req.params.id], function(err) {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'DB 삭제 오류', error: err.message });
+    }
+    res.json({ success: true, message: '차량 삭제 완료' });
+  });
+});
+
+// ===== drivers DB 연동 API =====
+app.get('/api/drivers', (req, res) => {
+  db.all('SELECT * FROM drivers', [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'DB 조회 오류', error: err.message });
+    }
+    res.json({ success: true, data: rows });
+  });
+});
+app.post('/api/drivers', (req, res) => {
+  const { company_id, name, phone, status } = req.body;
+  const sql = `INSERT INTO drivers (company_id, name, phone, status) VALUES (?, ?, ?, ?)`;
+  const params = [company_id, name, phone, status];
+  db.run(sql, params, function(err) {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'DB 등록 오류', error: err.message });
+    }
+    db.get('SELECT * FROM drivers WHERE driver_id = ?', [this.lastID], (err2, row) => {
+      if (err2) {
+        return res.status(500).json({ success: false, message: 'DB 조회 오류', error: err2.message });
+      }
+      res.json({ success: true, data: row });
+    });
+  });
+});
+app.put('/api/drivers/:id', (req, res) => {
+  const { company_id, name, phone, status } = req.body;
+  const sql = `UPDATE drivers SET company_id=?, name=?, phone=?, status=? WHERE driver_id=?`;
+  const params = [company_id, name, phone, status, req.params.id];
+  db.run(sql, params, function(err) {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'DB 수정 오류', error: err.message });
+    }
+    db.get('SELECT * FROM drivers WHERE driver_id = ?', [req.params.id], (err2, row) => {
+      if (err2) {
+        return res.status(500).json({ success: false, message: 'DB 조회 오류', error: err2.message });
+      }
+      res.json({ success: true, data: row });
+    });
+  });
+});
+app.delete('/api/drivers/:id', (req, res) => {
+  db.run('DELETE FROM drivers WHERE driver_id = ?', [req.params.id], function(err) {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'DB 삭제 오류', error: err.message });
+    }
+    res.json({ success: true, message: '운전자 삭제 완료' });
+  });
+});
+
+// ===== emptyRuns 샘플 데이터 및 API =====
+let emptyRuns = [
+  { id: 3001, vehicleId: 2001, driverId: 1, companyId: 1001, startLocation: '서울', endLocation: '부산', startDate: '2024-01-15', startTime: '09:00', estimatedArrivalTime: '18:00', capacity: 3000, status: '예정' },
+  { id: 3002, vehicleId: 2002, driverId: 2, companyId: 1002, startLocation: '대구', endLocation: '인천', startDate: '2024-01-16', startTime: '10:00', estimatedArrivalTime: '19:00', capacity: 2500, status: '진행중' },
+  { id: 3003, vehicleId: 2003, driverId: 3, companyId: 1003, startLocation: '광주', endLocation: '대전', startDate: '2024-01-17', startTime: '08:00', estimatedArrivalTime: '17:00', capacity: 4000, status: '완료' }
+];
+
+// ===== shippers 샘플 데이터 및 API =====
+let shippers = [
+  { id: 4001, name: '삼성전자', contact: '02-2255-0114', address: '경기 수원시', etc: '대기업' },
+  { id: 4002, name: '현대자동차', contact: '02-3464-1114', address: '서울 강남구', etc: '자동차' },
+  { id: 4003, name: 'CJ대한통운', contact: '02-1234-5678', address: '서울 중구', etc: '물류' }
+];
+
 // 유틸리티 함수
 const findUserByPhone = (phone) => users.find(user => user.phone === phone);
 const findPostById = (id) => posts.find(post => post.id === parseInt(id));
@@ -57,173 +236,54 @@ const handleValidationErrors = (req, res, next) => {
   next();
 };
 
-// ===== 사용자 API =====
-
-// 모든 사용자 조회
+// ===== users DB 연동 API =====
 app.get('/api/users', (req, res) => {
-  try {
-    const { page = 1, limit = 10 } = req.query;
-    const startIndex = (page - 1) * limit;
-    const endIndex = page * limit;
-    
-    const paginatedUsers = users.slice(startIndex, endIndex);
-    
-    res.json({
-      success: true,
-      data: paginatedUsers,
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(users.length / limit),
-        totalUsers: users.length
+  db.all('SELECT * FROM users', [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'DB 조회 오류', error: err.message });
+    }
+    res.json({ success: true, data: rows });
+  });
+});
+app.post('/api/users', (req, res) => {
+  const { company_id, username, password_hash, full_name, email, phone, role, status } = req.body;
+  const sql = `INSERT INTO users (company_id, username, password_hash, full_name, email, phone, role, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+  const params = [company_id, username, password_hash, full_name, email, phone, role, status];
+  db.run(sql, params, function(err) {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'DB 등록 오류', error: err.message });
+    }
+    db.get('SELECT * FROM users WHERE user_id = ?', [this.lastID], (err2, row) => {
+      if (err2) {
+        return res.status(500).json({ success: false, message: 'DB 조회 오류', error: err2.message });
       }
+      res.json({ success: true, data: row });
     });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: '서버 오류가 발생했습니다'
-    });
-  }
+  });
 });
-
-// 특정 사용자 조회
-app.get('/api/users/:phone', (req, res) => {
-  try {
-    const user = findUserByPhone(req.params.phone);
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: '사용자를 찾을 수 없습니다'
-      });
+app.put('/api/users/:id', (req, res) => {
+  const { company_id, username, password_hash, full_name, email, phone, role, status, last_login } = req.body;
+  const sql = `UPDATE users SET company_id=?, username=?, password_hash=?, full_name=?, email=?, phone=?, role=?, status=?, last_login=?, updated_at=CURRENT_TIMESTAMP WHERE user_id=?`;
+  const params = [company_id, username, password_hash, full_name, email, phone, role, status, last_login, req.params.id];
+  db.run(sql, params, function(err) {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'DB 수정 오류', error: err.message });
     }
-    
-    res.json({
-      success: true,
-      data: user
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: '서버 오류가 발생했습니다'
-    });
-  }
-});
-
-// 새 사용자 생성
-app.post('/api/users', [
-  body('name').trim().isLength({ min: 2 }).withMessage('이름은 최소 2글자 이상이어야 합니다'),
-  body('email').isEmail().withMessage('유효한 이메일 주소를 입력해주세요')
-], handleValidationErrors, (req, res) => {
-  try {
-    const { name, email } = req.body;
-    
-    // 이메일 중복 확인
-    const existingUser = users.find(user => user.email === email);
-    if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        message: '이미 존재하는 이메일입니다'
-      });
-    }
-    
-    const newUser = {
-      id: generateId(users),
-      name,
-      email,
-      createdAt: new Date()
-    };
-    
-    users.push(newUser);
-    
-    res.status(201).json({
-      success: true,
-      message: '사용자가 성공적으로 생성되었습니다',
-      data: newUser
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: '서버 오류가 발생했습니다'
-    });
-  }
-});
-
-// 사용자 정보 수정
-app.put('/api/users/:phone', [
-  body('name').optional().trim().isLength({ min: 2 }).withMessage('이름은 최소 2글자 이상이어야 합니다'),
-  body('email').optional().isEmail().withMessage('유효한 이메일 주소를 입력해주세요')
-], handleValidationErrors, (req, res) => {
-  try {
-    const phone = req.params.phone;
-    const userIndex = users.findIndex(user => user.phone === phone);
-    
-    if (userIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: '사용자를 찾을 수 없습니다'
-      });
-    }
-    
-    const { name, email } = req.body;
-    
-    // 이메일 중복 확인 (자신 제외)
-    if (email) {
-      const existingUser = users.find(user => user.email === email && user.phone !== phone);
-      if (existingUser) {
-        return res.status(409).json({
-          success: false,
-          message: '이미 존재하는 이메일입니다'
-        });
+    db.get('SELECT * FROM users WHERE user_id = ?', [req.params.id], (err2, row) => {
+      if (err2) {
+        return res.status(500).json({ success: false, message: 'DB 조회 오류', error: err2.message });
       }
-    }
-    
-    users[userIndex] = {
-      ...users[userIndex],
-      ...(name && { name }),
-      ...(email && { email }),
-      updatedAt: new Date()
-    };
-    
-    res.json({
-      success: true,
-      message: '사용자 정보가 성공적으로 수정되었습니다',
-      data: users[userIndex]
+      res.json({ success: true, data: row });
     });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: '서버 오류가 발생했습니다'
-    });
-  }
+  });
 });
-
-// 사용자 삭제
-app.delete('/api/users/:phone', (req, res) => {
-  try {
-    const phone = req.params.phone;
-    const userIndex = users.findIndex(user => user.phone === phone);
-    
-    if (userIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: '사용자를 찾을 수 없습니다'
-      });
+app.delete('/api/users/:id', (req, res) => {
+  db.run('DELETE FROM users WHERE user_id = ?', [req.params.id], function(err) {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'DB 삭제 오류', error: err.message });
     }
-    
-    // 해당 사용자의 포스트도 함께 삭제
-    posts = posts.filter(post => post.userId !== phone);
-    users.splice(userIndex, 1);
-    
-    res.json({
-      success: true,
-      message: '사용자가 성공적으로 삭제되었습니다'
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: '서버 오류가 발생했습니다'
-    });
-  }
+    res.json({ success: true, message: '사용자 삭제 완료' });
+  });
 });
 
 // ===== 포스트 API =====
@@ -437,6 +497,58 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
+});
+
+// ===== emptyRuns 샘플 데이터 및 API =====
+app.get('/api/emptyruns', (req, res) => {
+  res.json({ success: true, data: emptyRuns });
+});
+app.post('/api/emptyruns', (req, res) => {
+  const { vehicleId, driverId, companyId, startLocation, endLocation, startDate, startTime, estimatedArrivalTime, capacity, status } = req.body;
+  const newEmptyRun = {
+    id: emptyRuns.length ? Math.max(...emptyRuns.map(e => e.id)) + 1 : 3001,
+    vehicleId, driverId, companyId, startLocation, endLocation, startDate, startTime, estimatedArrivalTime, capacity, status
+  };
+  emptyRuns.push(newEmptyRun);
+  res.status(201).json({ success: true, data: newEmptyRun });
+});
+app.put('/api/emptyruns/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const idx = emptyRuns.findIndex(e => e.id === id);
+  if (idx === -1) return res.status(404).json({ success: false, message: '공차운행 없음' });
+  emptyRuns[idx] = { ...emptyRuns[idx], ...req.body };
+  res.json({ success: true, data: emptyRuns[idx] });
+});
+app.delete('/api/emptyruns/:id', (req, res) => {
+  const id = Number(req.params.id);
+  emptyRuns = emptyRuns.filter(e => e.id !== id);
+  res.json({ success: true });
+});
+
+// ===== shippers 샘플 데이터 및 API =====
+app.get('/api/shippers', (req, res) => {
+  res.json({ success: true, data: shippers });
+});
+app.post('/api/shippers', (req, res) => {
+  const { name, contact, address, etc } = req.body;
+  const newShipper = {
+    id: shippers.length ? Math.max(...shippers.map(s => s.id)) + 1 : 4001,
+    name, contact, address, etc
+  };
+  shippers.push(newShipper);
+  res.status(201).json({ success: true, data: newShipper });
+});
+app.put('/api/shippers/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const idx = shippers.findIndex(s => s.id === id);
+  if (idx === -1) return res.status(404).json({ success: false, message: '화주 없음' });
+  shippers[idx] = { ...shippers[idx], ...req.body };
+  res.json({ success: true, data: shippers[idx] });
+});
+app.delete('/api/shippers/:id', (req, res) => {
+  const id = Number(req.params.id);
+  shippers = shippers.filter(s => s.id !== id);
+  res.json({ success: true });
 });
 
 // 404 핸들러

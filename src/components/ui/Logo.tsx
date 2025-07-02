@@ -17,19 +17,14 @@ const Logo = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   return (
-    <button
-      className="flex items-center gap-2 focus:outline-none bg-transparent border-0 cursor-pointer"
-      aria-label={t('common.logo')}
-      onClick={() => navigate('/')}
-      type="button"
-    >
+    <div className="flex items-center gap-2 select-none" aria-label={t('common.logo')}>
       <span className="inline-block">
         <TruckLogoIcon />
       </span>
-      <span className="text-2xl font-bold text-white drop-shadow-sm select-none hidden sm:inline" style={{letterSpacing: '0.01em'}}>
+      <span className="text-2xl font-bold text-white drop-shadow-sm hidden sm:inline" style={{letterSpacing: '0.01em'}}>
         LogiShare
       </span>
-    </button>
+    </div>
   );
 };
 

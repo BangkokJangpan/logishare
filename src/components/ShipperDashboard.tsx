@@ -68,20 +68,22 @@ const ShipperDashboard = () => {
 
   const handleLogisticsRequestSubmit = e => {
     e.preventDefault();
-    if (!logisticsRequestForm.id || !logisticsRequestForm.shipperId || !logisticsRequestForm.startLocation || !logisticsRequestForm.endLocation) return;
+    if (!logisticsRequestForm.shipperId || !logisticsRequestForm.startLocation || !logisticsRequestForm.endLocation) return;
     if (editLogisticsRequestId) {
       setLogisticsRequests(logisticsRequests.map(lr => lr.id === editLogisticsRequestId ? { 
         ...logisticsRequestForm, 
-        id: Number(logisticsRequestForm.id), 
+        id: editLogisticsRequestId, 
         shipperId: Number(logisticsRequestForm.shipperId), 
         weight: Number(logisticsRequestForm.weight) 
       } : lr));
       setEditLogisticsRequestId(null);
     } else {
-      if (logisticsRequests.some(lr => lr.id === Number(logisticsRequestForm.id))) return;
+      // id 자동 증가
+      const maxId = logisticsRequests.length > 0 ? Math.max(...logisticsRequests.map(lr => lr.id)) : 4000;
+      const newId = maxId + 1;
       setLogisticsRequests([...logisticsRequests, { 
         ...logisticsRequestForm, 
-        id: Number(logisticsRequestForm.id), 
+        id: newId, 
         shipperId: Number(logisticsRequestForm.shipperId), 
         weight: Number(logisticsRequestForm.weight) 
       }]);
@@ -177,6 +179,19 @@ const ShipperDashboard = () => {
     { label: t('shipper.stats.avgSavings'), value: "23%", icon: AlertTriangle, color: "text-orange-600" }
   ];
 
+  // 회사 리스트(샘플)
+  const companies = [
+    { id: 1001, name: '로지쉐어' },
+    { id: 1002, name: '스마트물류' },
+    { id: 1003, name: '에코트랜스' },
+    { id: 1004, name: '글로벌로지' },
+    { id: 1005, name: '이지카고' },
+  ];
+  const getCompanyName = (shipperId) => {
+    const company = companies.find(c => c.id === Number(shipperId));
+    return company ? company.name : '-';
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 p-6 text-foreground">
       <div className="max-w-7xl mx-auto">
@@ -184,9 +199,9 @@ const ShipperDashboard = () => {
         <div className="mb-8 relative">
           <div className="flex items-center justify-between">
             {/* 좌측: 홈버튼 */}
-            <div className="flex items-center gap-4 min-w-[180px]">
+            <a href="/" className="flex items-center gap-4 min-w-[180px] cursor-pointer no-underline">
               <Logo />
-            </div>
+            </a>
             {/* 중앙: 제목/부제목 */}
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center w-full pointer-events-none">
               <h1 className="text-3xl font-bold text-white pointer-events-auto">{t('shipper.dashboard.title')}</h1>
@@ -579,31 +594,20 @@ const ShipperDashboard = () => {
 
       {/* 물류 요청 팝업 */}
       <Dialog open={logisticsRequestDialogOpen} onOpenChange={setLogisticsRequestDialogOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-[#0f1a2e] text-white">
           <DialogHeader>
             <DialogTitle className="text-2xl">{t('logisticsRequest.title')}</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-6">
             {/* 등록 폼 */}
-            <Card className="bg-gray-50">
+            <Card className="bg-[#0f1a2e] text-white">
               <CardHeader>
                 <CardTitle className="text-lg">{editLogisticsRequestId ? t('logisticsRequest.edit') : t('logisticsRequest.register')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleLogisticsRequestSubmit} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="logistics-request-id">{t('logisticsRequest.id')}</Label>
-                      <Input
-                        id="logistics-request-id"
-                        name="id"
-                        value={logisticsRequestForm.id}
-                        onChange={handleLogisticsRequestChange}
-                        placeholder="예: 4001"
-                        required
-                      />
-                    </div>
                     <div>
                       <Label htmlFor="logistics-request-shipper-id">{t('logisticsRequest.shipperId')}</Label>
                       <Input
@@ -753,13 +757,13 @@ const ShipperDashboard = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t('logisticsRequest.id')}</TableHead>
+                      {/* <TableHead>{t('logisticsRequest.id')}</TableHead> */}
                       <TableHead>{t('logisticsRequest.shipperId')}</TableHead>
                       <TableHead>{t('logisticsRequest.cargoType')}</TableHead>
                       <TableHead>{t('logisticsRequest.startLocation')}</TableHead>
                       <TableHead>{t('logisticsRequest.endLocation')}</TableHead>
-                      <TableHead>{t('logisticsRequest.startTime')}</TableHead>
-                      <TableHead>{t('logisticsRequest.endTime')}</TableHead>
+                      <TableHead>{t('logisticsRequest.startAvailableTime')}</TableHead>
+                      <TableHead>{t('logisticsRequest.endTargetTime')}</TableHead>
                       <TableHead>{t('logisticsRequest.weight')}</TableHead>
                       <TableHead>{t('logisticsRequest.priority')}</TableHead>
                       <TableHead>{t('logisticsRequest.status')}</TableHead>
@@ -769,8 +773,8 @@ const ShipperDashboard = () => {
                   <TableBody>
                     {logisticsRequests.map((logisticsRequest) => (
                       <TableRow key={logisticsRequest.id}>
-                        <TableCell>{logisticsRequest.id}</TableCell>
-                        <TableCell>{logisticsRequest.shipperId}</TableCell>
+                        {/* <TableCell>{logisticsRequest.id}</TableCell> */}
+                        <TableCell>{getCompanyName(logisticsRequest.shipperId)}</TableCell>
                         <TableCell>{logisticsRequest.cargoType}</TableCell>
                         <TableCell>{logisticsRequest.startLocation}</TableCell>
                         <TableCell>{logisticsRequest.endLocation}</TableCell>
